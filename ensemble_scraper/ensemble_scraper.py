@@ -88,15 +88,20 @@ def save_to_fasta(filename, seq_df):
 
     with open(filename, 'w') as handle:
         for index, record in seq_df.iterrows():
-            SeqIO.write(
-                SeqRecord(
-                    Seq(record.seq),
-                    record.so_name + '_' + record.seq_region_name + ":" + str(record.seq_region_start) + ".." + str(record.seq_region_end),
-                    description=""
-                ),
-                handle,
-                'fasta'
-            )
+
+            # check if record contains sequence
+            #  - there might be some loci from scaffolds that was not found in fasta file
+            if record.seq != '':
+
+                SeqIO.write(
+                    SeqRecord(
+                        Seq(record.seq),
+                        record.so_name + '_' + record.seq_region_name + ":" + str(record.seq_region_start) + ".." + str(record.seq_region_end),
+                        description=""
+                    ),
+                    handle,
+                    'fasta'
+                )
 
 
 if __name__ == '__main__':
