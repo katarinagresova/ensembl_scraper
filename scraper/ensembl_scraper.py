@@ -5,10 +5,10 @@ import gzip
 from tqdm import tqdm
 from Bio import SeqIO
 import logging
-from ensemble_scraper.utils import save_to_fasta
+import scraper.utils as utils
 
 logging.basicConfig(level=logging.DEBUG)
-CONFIG_FILE = 'config.yaml'
+CONFIG_FILE = '../config.yaml'
 with open(CONFIG_FILE, "r") as ymlfile:
     config = yaml.load(ymlfile, Loader=yaml.FullLoader)
 
@@ -127,4 +127,4 @@ if __name__ == '__main__':
 
                 # TODO: looking for sequences might be better to do on whole feature file at once
                 feature_seqs = find_sequences(local_fasta, feature_seqs)
-                save_to_fasta('../data/result/' + o + '_' + f + '_' + feature_type + '.fa', feature_seqs)
+                utils.save_to_fasta('../data/result/' + o + '_' + f + '_' + feature_type + '.fa', feature_seqs)
