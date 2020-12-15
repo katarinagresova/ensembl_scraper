@@ -1,16 +1,27 @@
 import yaml
 import urllib.request
 import pandas as pd
-import gzip
 from tqdm import tqdm
-from Bio import SeqIO
+from twobitreader import TwoBitFile, twobit_reader
+from twobitreader.download import save_genome
 import logging
-import scraper.utils as utils
+import os
 
 logging.basicConfig(level=logging.DEBUG)
 CONFIG_FILE = '../config.yaml'
 with open(CONFIG_FILE, "r") as ymlfile:
     config = yaml.load(ymlfile, Loader=yaml.FullLoader)
+
+
+class File:
+    def __init__(self, name, mode='w'):
+        self.f = open(name, mode, buffering=1)
+
+    def write(self, string, newline=True):
+        if newline:
+            self.f.write(string + '\n')
+        else:
+            self.f.write(string)
 
 
 def download_file(url, local_path):
@@ -25,6 +36,18 @@ def download_file(url, local_path):
         logging.info("download_file(): File downloaded to path {}.".format(local_path))
 
 
+def download_2bit_file(genome_name, local_dir):
+    logging.info("download_2bit_file(): Going to download 2bit file {}".format(genome_name))
+
+    try:
+        file = open(os.path.join(local_dir, genome_name + '.2bit'))
+        file.close()
+        logging.info("download_2bit_file(): File for {} already exists. Not going to download.".format(genome_name))
+    except FileNotFoundError:
+        save_genome(genome_name, destdir=local_dir)
+        logging.info("download_2bit_file(): File for {} downloaded to path {}.".format(genome_name, os.path.join(local_dir, genome_name + '.2bit')))
+
+
 def get_supported_organisms():
     return list(config['organisms'].keys())
 
@@ -35,6 +58,10 @@ def get_fasta_path(organism):
     fasta_file = config['organisms'][organism]['fasta_file']
 
     return ensembl_ftp + 'release-' + release + '/fasta/' + organism + '/dna/' + fasta_file
+
+
+def get_2bit_file_name(organism):
+    return config['organisms'][organism]['2bit_file_name']
 
 
 def get_supported_features(organism):
@@ -71,33 +98,24 @@ def parse_feature_file(path, feature):
     return seqs
 
 
-def find_sequences(fasta_file, seqs):
-    logging.info("find_sequences(): Going to find sequences in file {} for features {}".format(
-        fasta_file,
-        seqs[get_feature_column_name(seqs.keys())].unique()
-    ))
+def convert_df_to_expected_bed(df):
+    seqs_loci = df[['seq_region_name', 'seq_region_start', 'seq_region_end']].values.tolist()
+    return ['chr' + ' '.join(str(x) for x in line) for line in seqs_loci]
 
-    def which(self):
-        try:
-            self = list(iter(self))
-        except TypeError as e:
-            raise Exception("""'which' method can only be applied to iterables.
-            {}""".format(str(e)))
-        indices = [i for i, x in enumerate(self) if bool(x) is True]
-        return indices
 
-    with gzip.open(fasta_file, "rt") as handle:
-        for record in tqdm(SeqIO.parse(handle, "fasta"), total=24):
-            sel_seqs = which(seqs.seq_region_name == record.id)
-            for i in sel_seqs:
-                seqs.loc[i, "seq"] = str(record.seq[(seqs.seq_region_start[i] - 1):seqs.seq_region_end[i]])
+def find_sequences_and_save_to_fasta(organism, seqs, out_fasta, local_dir='../../ensembl_data/2bit/'):
 
-            if record.id == "MT":
-                # stop, do not read small contigs
-                break
+    logging.info('find_sequences_and_save_to_fasta(): Going to find sequences based on genomic loci and save results to fasta file.')
 
-    logging.info("find_sequences(): Found sequences from file {}".format(fasta_file))
-    return seqs
+    genome_name = get_2bit_file_name(organism)
+    download_2bit_file(genome_name, local_dir)
+    twobit_path = os.path.join(local_dir, genome_name + '.2bit')
+    seqs_loci_list = convert_df_to_expected_bed(seqs)
+    genome = TwoBitFile(twobit_path)
+    fasta_handle = File(out_fasta)
+    twobit_reader(genome, seqs_loci_list, fasta_handle.write)
+
+    logging.info('find_sequences_and_save_to_fasta(): Done finding sequences and saving them to fasta file.')
 
 
 if __name__ == '__main__':
@@ -105,15 +123,11 @@ if __name__ == '__main__':
     organisms = get_supported_organisms()
     for o in organisms:
 
-        fasta_path = get_fasta_path(o)
-        local_fasta = '../data/fasta/' + o + '.fa.gz'
-        download_file(fasta_path, local_fasta)
-
         features = get_supported_features(o)
         for f in features:
 
             feature_path = get_feature_path(o, f)
-            local_feature = '../data/feature/' + o + '_' + f + '.txt.gz'
+            local_feature = '../../ensembl_data/feature/' + o + '_' + f + '.txt.gz'
             download_file(feature_path, local_feature)
 
             seqs = parse_feature_file(local_feature, f)
@@ -125,6 +139,4 @@ if __name__ == '__main__':
                 feature_seqs = seqs[seqs[feature_column_name] == feature_type].copy()
                 feature_seqs = feature_seqs.reset_index(drop=True)
 
-                # TODO: looking for sequences might be better to do on whole feature file at once
-                feature_seqs = find_sequences(local_fasta, feature_seqs)
-                utils.save_to_fasta('../data/result/' + o + '_' + f + '_' + feature_type + '.fa', feature_seqs)
+                find_sequences_and_save_to_fasta(o, feature_seqs, '../../ensembl_data/result/' + o + '_' + f + '_' + feature_type + '.fa')

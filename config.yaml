@@ -58,6 +58,7 @@ global:
 organisms:
   mus_musculus:
     fasta_file: Mus_musculus.GRCm38.dna_rm.toplevel.fa.gz
+    2bit_file_name: mm10
     features:
       regulatory_feature:
         file: mmusculus_regulatory_feature__regulatory_feature__main.txt.gz
@@ -69,6 +70,7 @@ organisms:
         file: mmusculus_external_feature__external_feature__main.txt.gz
   homo_sapiens:
     fasta_file: Homo_sapiens.GRCh38.dna.toplevel.fa.gz
+    2bit_file_name: hg38
     features:
       regulatory_feature:
         file: hsapiens_regulatory_feature__regulatory_feature__main.txt.gz
