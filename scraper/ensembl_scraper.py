@@ -14,6 +14,11 @@ with open(CONFIG_FILE, "r") as ymlfile:
 
 
 class File:
+    """Wrapper class around basic python file handling.
+
+    Created to override write() method and add newline at the end of every write()
+    """
+
     def __init__(self, name, mode='w'):
         self.f = open(name, mode, buffering=1)
 
@@ -87,15 +92,15 @@ def parse_feature_file(path, feature):
     logging.info("parse_feature_file(): Going to parse file {}".format(path))
 
     header_list = config['global']['features'][feature]['columns']
+    feature_column_name = get_feature_column_name(header_list)
+    needed_cols = [feature_column_name, 'seq_region_name', 'seq_region_start', 'seq_region_end']
     logging.debug("parse_feature_file(): Using headers: {}".format(header_list))
-    df = pd.read_csv(path, sep='\t', names=header_list)
-    feature_column_name = get_feature_column_name(df.keys())
-    seqs = df[[feature_column_name, 'seq_region_name', 'seq_region_start', 'seq_region_end']].copy()
-    seqs['seq'] = ''
-    logging.debug("parse_feature_file(): Kept columns: {}".format(list(seqs.keys())))
+    df = pd.read_csv(path, sep='\t', names=header_list, usecols=needed_cols)
+
+    logging.debug("parse_feature_file(): Kept columns: {}".format(list(df.keys())))
     logging.info("parse_feature_file(): Done parsing file {}".format(path))
 
-    return seqs
+    return df
 
 
 def convert_df_to_expected_bed(df):
@@ -105,7 +110,11 @@ def convert_df_to_expected_bed(df):
 
 def find_sequences_and_save_to_fasta(organism, seqs, out_fasta, local_dir='../../ensembl_data/2bit/'):
 
-    logging.info('find_sequences_and_save_to_fasta(): Going to find sequences based on genomic loci and save results to fasta file.')
+    feature_column_name = get_feature_column_name(seqs.keys())
+    feature_type = seqs[feature_column_name][0]
+    logging.info('find_sequences_and_save_to_fasta(): '
+                 'Going to find sequences based on genomic loci and save results to fasta file. '
+                 'Organism: {}, Feature type: {}'.format(organism, feature_type))
 
     genome_name = get_2bit_file_name(organism)
     download_2bit_file(genome_name, local_dir)
@@ -121,10 +130,10 @@ def find_sequences_and_save_to_fasta(organism, seqs, out_fasta, local_dir='../..
 if __name__ == '__main__':
 
     organisms = get_supported_organisms()
-    for o in organisms:
+    for o in tqdm(organisms, desc='Processing organisms'):
 
         features = get_supported_features(o)
-        for f in features:
+        for f in tqdm(features, desc='Processing feature files'):
 
             feature_path = get_feature_path(o, f)
             local_feature = '../../ensembl_data/feature/' + o + '_' + f + '.txt.gz'
@@ -134,7 +143,7 @@ if __name__ == '__main__':
 
             feature_column_name = get_feature_column_name(seqs.keys())
             feature_types = seqs[feature_column_name].unique()
-            for feature_type in feature_types:
+            for feature_type in tqdm(feature_types, desc='Processing feature types'):
 
                 feature_seqs = seqs[seqs[feature_column_name] == feature_type].copy()
                 feature_seqs = feature_seqs.reset_index(drop=True)
