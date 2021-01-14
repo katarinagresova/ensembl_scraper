@@ -1,6 +1,6 @@
 import os
 import urllib.request
-
+import yaml
 from Bio.Seq import Seq
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
@@ -8,8 +8,15 @@ import logging
 from tqdm import tqdm
 from twobitreader import TwoBitFile
 from twobitreader.download import save_genome
+from pathlib import Path
 
-from scraper.ensembl_scraper import get_2bit_file_name
+CONFIG_FILE = '../config.yaml'
+with open(CONFIG_FILE, "r") as ymlfile:
+    config = yaml.load(ymlfile, Loader=yaml.FullLoader)
+
+
+def make_dir(dir):
+  Path(dir).mkdir(parents=True, exist_ok=True)
 
 
 def save_to_fasta(filename, seq_df):
@@ -76,8 +83,21 @@ def download_2bit_file(genome_name, local_dir):
         logging.info("download_2bit_file(): File for {} downloaded to path {}.".format(genome_name, os.path.join(local_dir, genome_name + '.2bit')))
 
 
-def get_2bit_genome_file(organism, local_dir):
+def get_2bit_genome_file(organism, local_dir='../../ensembl_data/2bit/'):
     genome_name = get_2bit_file_name(organism)
     download_2bit_file(genome_name, local_dir)
     twobit_path = os.path.join(local_dir, genome_name + '.2bit')
     return TwoBitFile(twobit_path)
+
+
+def convert_df_to_format_for_twobitreader(df):
+    seqs_loci = df[['seq_region_name', 'seq_region_start', 'seq_region_end']].values.tolist()
+
+    if df['seq_region_name'][0].startswith('chr'):
+        return [' '.join(str(x) for x in line) for line in seqs_loci]
+    else:
+        return ['chr' + ' '.join(str(x) for x in line) for line in seqs_loci]
+
+
+def get_2bit_file_name(organism):
+    return config['organisms'][organism]['2bit_file_name']
