@@ -1,8 +1,15 @@
+import os
+import urllib.request
+
 from Bio.Seq import Seq
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 import logging
 from tqdm import tqdm
+from twobitreader import TwoBitFile
+from twobitreader.download import save_genome
+
+from scraper.ensembl_scraper import get_2bit_file_name
 
 
 def save_to_fasta(filename, seq_df):
@@ -43,3 +50,34 @@ class File:
             self.f.write(string + '\n')
         else:
             self.f.write(string)
+
+
+def download_file(url, local_path):
+    logging.info("download_file(): Going to download file from path {}".format(url))
+
+    try:
+        file = open(local_path)
+        file.close()
+        logging.info("download_file(): File {} already exists. Not going to download.".format(local_path))
+    except FileNotFoundError:
+        urllib.request.urlretrieve(url, local_path)
+        logging.info("download_file(): File downloaded to path {}.".format(local_path))
+
+
+def download_2bit_file(genome_name, local_dir):
+    logging.info("download_2bit_file(): Going to download 2bit file {}".format(genome_name))
+
+    try:
+        file = open(os.path.join(local_dir, genome_name + '.2bit'))
+        file.close()
+        logging.info("download_2bit_file(): File for {} already exists. Not going to download.".format(genome_name))
+    except FileNotFoundError:
+        save_genome(genome_name, destdir=local_dir)
+        logging.info("download_2bit_file(): File for {} downloaded to path {}.".format(genome_name, os.path.join(local_dir, genome_name + '.2bit')))
+
+
+def get_2bit_genome_file(organism, local_dir):
+    genome_name = get_2bit_file_name(organism)
+    download_2bit_file(genome_name, local_dir)
+    twobit_path = os.path.join(local_dir, genome_name + '.2bit')
+    return TwoBitFile(twobit_path)

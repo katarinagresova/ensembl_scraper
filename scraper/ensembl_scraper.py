@@ -1,41 +1,14 @@
 import yaml
-import urllib.request
 import pandas as pd
 from tqdm import tqdm
-from twobitreader import TwoBitFile, twobit_reader
-from twobitreader.download import save_genome
+from twobitreader import twobit_reader
 import logging
-import os
-from scraper.utils import File
+from scraper.utils import File, download_file, get_2bit_genome_file
 
 logging.basicConfig(level=logging.DEBUG)
 CONFIG_FILE = '../config.yaml'
 with open(CONFIG_FILE, "r") as ymlfile:
     config = yaml.load(ymlfile, Loader=yaml.FullLoader)
-
-
-def download_file(url, local_path):
-    logging.info("download_file(): Going to download file from path {}".format(url))
-
-    try:
-        file = open(local_path)
-        file.close()
-        logging.info("download_file(): File {} already exists. Not going to download.".format(local_path))
-    except FileNotFoundError:
-        urllib.request.urlretrieve(url, local_path)
-        logging.info("download_file(): File downloaded to path {}.".format(local_path))
-
-
-def download_2bit_file(genome_name, local_dir):
-    logging.info("download_2bit_file(): Going to download 2bit file {}".format(genome_name))
-
-    try:
-        file = open(os.path.join(local_dir, genome_name + '.2bit'))
-        file.close()
-        logging.info("download_2bit_file(): File for {} already exists. Not going to download.".format(genome_name))
-    except FileNotFoundError:
-        save_genome(genome_name, destdir=local_dir)
-        logging.info("download_2bit_file(): File for {} downloaded to path {}.".format(genome_name, os.path.join(local_dir, genome_name + '.2bit')))
 
 
 def get_supported_organisms():
@@ -91,13 +64,6 @@ def parse_feature_file(path, feature):
 def convert_df_to_expected_bed(df):
     seqs_loci = df[['seq_region_name', 'seq_region_start', 'seq_region_end']].values.tolist()
     return ['chr' + ' '.join(str(x) for x in line) for line in seqs_loci]
-
-
-def get_2bit_genome_file(organism, local_dir):
-    genome_name = get_2bit_file_name(organism)
-    download_2bit_file(genome_name, local_dir)
-    twobit_path = os.path.join(local_dir, genome_name + '.2bit')
-    return TwoBitFile(twobit_path)
 
 
 def find_sequences_and_save_to_fasta(organism, seqs, out_fasta, local_dir='../../ensembl_data/2bit/'):
