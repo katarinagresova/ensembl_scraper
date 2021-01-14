@@ -27,3 +27,19 @@ def save_to_fasta(filename, seq_df):
                 )
 
     logging.info("save_to_fasta(): Sequences saved to file {}".format(filename))
+
+
+class File:
+    """Wrapper class around basic python file handling.
+
+    Created to override write() method and add newline at the end of every write()
+    """
+
+    def __init__(self, name, mode='w'):
+        self.f = open(name, mode, buffering=1)
+
+    def write(self, string, newline=True):
+        if newline:
+            self.f.write(string + '\n')
+        else:
+            self.f.write(string)

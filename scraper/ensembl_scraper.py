@@ -6,27 +6,12 @@ from twobitreader import TwoBitFile, twobit_reader
 from twobitreader.download import save_genome
 import logging
 import os
+from scraper.utils import File
 
 logging.basicConfig(level=logging.DEBUG)
 CONFIG_FILE = '../config.yaml'
 with open(CONFIG_FILE, "r") as ymlfile:
     config = yaml.load(ymlfile, Loader=yaml.FullLoader)
-
-
-class File:
-    """Wrapper class around basic python file handling.
-
-    Created to override write() method and add newline at the end of every write()
-    """
-
-    def __init__(self, name, mode='w'):
-        self.f = open(name, mode, buffering=1)
-
-    def write(self, string, newline=True):
-        if newline:
-            self.f.write(string + '\n')
-        else:
-            self.f.write(string)
 
 
 def download_file(url, local_path):
