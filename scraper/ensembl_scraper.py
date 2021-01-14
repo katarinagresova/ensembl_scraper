@@ -108,6 +108,13 @@ def convert_df_to_expected_bed(df):
     return ['chr' + ' '.join(str(x) for x in line) for line in seqs_loci]
 
 
+def get_2bit_genome_file(organism, local_dir):
+    genome_name = get_2bit_file_name(organism)
+    download_2bit_file(genome_name, local_dir)
+    twobit_path = os.path.join(local_dir, genome_name + '.2bit')
+    return TwoBitFile(twobit_path)
+
+
 def find_sequences_and_save_to_fasta(organism, seqs, out_fasta, local_dir='../../ensembl_data/2bit/'):
 
     feature_column_name = get_feature_column_name(seqs.keys())
@@ -116,12 +123,12 @@ def find_sequences_and_save_to_fasta(organism, seqs, out_fasta, local_dir='../..
                  'Going to find sequences based on genomic loci and save results to fasta file. '
                  'Organism: {}, Feature type: {}'.format(organism, feature_type))
 
-    genome_name = get_2bit_file_name(organism)
-    download_2bit_file(genome_name, local_dir)
-    twobit_path = os.path.join(local_dir, genome_name + '.2bit')
+    # fix for difference in 0/1-based coordinates in retrieved loci and used genome
+    seqs['seq_region_start'] = seqs['seq_region_start'] - 1
+
     seqs_loci_list = convert_df_to_expected_bed(seqs)
-    genome = TwoBitFile(twobit_path)
     fasta_handle = File(out_fasta)
+    genome = get_2bit_genome_file(organism, local_dir)
     twobit_reader(genome, seqs_loci_list, fasta_handle.write)
 
     logging.info('find_sequences_and_save_to_fasta(): Done finding sequences and saving them to fasta file.')
@@ -132,7 +139,8 @@ if __name__ == '__main__':
     organisms = get_supported_organisms()
     for o in tqdm(organisms, desc='Processing organisms'):
 
-        features = get_supported_features(o)
+        #features = get_supported_features(o)
+        features = ['regulatory_feature', 'mirna_target_feature', 'external_feature']
         for f in tqdm(features, desc='Processing feature files'):
 
             feature_path = get_feature_path(o, f)
