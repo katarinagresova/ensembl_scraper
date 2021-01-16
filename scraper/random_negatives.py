@@ -1,7 +1,13 @@
-from scraper.utils import get_2bit_genome_file, convert_df_to_format_for_twobitreader, File
+from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+
+from scraper.utils import get_2bit_genome_file
 import pandas as pd
 import numpy as np
-from twobitreader import twobit_reader
+import os
+
+MIN_CHROM_LENGTH = 100000
 
 
 def get_chr_names_and_lengths(organism):
@@ -9,7 +15,9 @@ def get_chr_names_and_lengths(organism):
     chr_lengths = {}
     genome = get_2bit_genome_file(organism)
     for chromosome in genome.keys():
-        chr_lengths[chromosome] = len(genome[chromosome])
+        length = len(genome[chromosome])
+        if length > MIN_CHROM_LENGTH:
+            chr_lengths[chromosome] = len(genome[chromosome])
 
     # check that all lengths are different from 0
     assert all(x != 0 for x in chr_lengths.values())
@@ -45,12 +53,29 @@ def generate_negatives_and_save_to_fasta(organism, excluded_seqs: pd.DataFrame, 
     chr_names_and_lengths = get_chr_names_and_lengths(organism)
     num_seqs = len(excluded_seqs)
 
-    random_seqs = []
-    for i in range(num_seqs):
-        seq_length = int(excluded_seqs['seq_region_end'][i]) - int(excluded_seqs['seq_region_start'][i])
-        c, pos = get_random_pos(excluded_seqs, chr_names_and_lengths, seq_length)
-        random_seqs.append(c + ' ' + str(pos) + ' ' + str(int(pos + seq_length)))
-
-    fasta_handle = File(out_dir + 'negative.fa')
-    genome = get_2bit_genome_file(organism, local_dir)
-    twobit_reader(genome, random_seqs, fasta_handle.write)
+    genome = get_2bit_genome_file(organism)
+    with open(out_dir + 'negative.fa', 'w') as handle:
+        try:
+            for i in range(num_seqs):
+                while True:
+                    seq_length = int(excluded_seqs['seq_region_end'][i]) - int(excluded_seqs['seq_region_start'][i])
+                    chrom, start = get_random_pos(excluded_seqs, chr_names_and_lengths, seq_length)
+                    end = start + seq_length
+                    seq = genome[chrom][start:end]
+                    if 'N' not in seq.upper():
+                        SeqIO.write(
+                            SeqRecord(
+                                Seq(seq),
+                                chrom + ':' + str(start) + '-' + str(end),
+                                description=""
+                            ),
+                            handle,
+                            'fasta'
+                        )
+                    break
+        except:
+            # close and delete the file, so we don't have partial results that look like full results
+            # the ctx manager will try to close the file again, but that's harmless.
+            handle.close()
+            os.remove(out_dir + 'negative.fa')
+            raise
