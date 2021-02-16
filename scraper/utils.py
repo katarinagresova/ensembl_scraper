@@ -9,6 +9,7 @@ from tqdm import tqdm
 from twobitreader import TwoBitFile
 from twobitreader.download import save_genome
 from pathlib import Path
+import pandas as pd
 
 CONFIG_FILE = '../config.yaml'
 with open(CONFIG_FILE, "r") as ymlfile:
@@ -19,7 +20,21 @@ def make_dir(dir):
   Path(dir).mkdir(parents=True, exist_ok=True)
 
 
-def save_to_fasta(filename, seq_df):
+def save_to_fasta(filenames, sequences):
+    if isinstance(sequences, SeqRecord) or isinstance(sequences, list):
+        save_seq_to_fasta(filenames, sequences)
+    elif isinstance(sequences, pd.DataFrame):
+        save_df_to_fasta(filenames, sequences)
+    else:
+        raise TypeError("Unsupported format of sequences. Use SeqRecord, list of SeqRecords or pd.DataFrame.")
+
+
+def save_seq_to_fasta(filename, seqs):
+    with open(filename, 'w') as handle:
+        SeqIO.write(seqs, handle, 'fasta')
+
+
+def save_df_to_fasta(filename, seq_df):
 
     logging.info("save_to_fasta(): Going to save sequences to file {}".format(filename))
 
