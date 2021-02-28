@@ -5,7 +5,6 @@ from Bio.Seq import Seq
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 import logging
-from tqdm import tqdm
 from twobitreader import TwoBitFile
 from twobitreader.download import save_genome
 from pathlib import Path
@@ -20,11 +19,31 @@ def make_dir(dir):
   Path(dir).mkdir(parents=True, exist_ok=True)
 
 
-def save_to_fasta(filenames, sequences):
+def save_test_to_fasta(filename, positives, negatives):
+    positives.loc[:, 'positive'] = 1
+    negatives.loc[:, 'positive'] = 0
+    samples = pd.concat([positives, negatives])
+
+    # shuffle samples
+    samples = samples.sample(frac=1).reset_index(drop=True)
+
+    # save positives+negatives without label
+    save_to_fasta(filename, samples)
+
+    samples.loc[samples['positive'] == 1, 'seq_region_name'] = 'positive_' + samples['seq_region_name']
+    samples.loc[samples['positive'] == 0, 'seq_region_name'] = 'negative_' + samples['seq_region_name']
+
+    # change filename of file with labels
+    filename = filename.with_name(filename.stem + '_with_labels.fa')
+    # save positives+negatives with label at beginning of ID
+    save_to_fasta(filename, samples)
+
+
+def save_to_fasta(filename, sequences):
     if isinstance(sequences, SeqRecord) or isinstance(sequences, list):
-        save_seq_to_fasta(filenames, sequences)
+        save_seq_to_fasta(filename, sequences)
     elif isinstance(sequences, pd.DataFrame):
-        save_df_to_fasta(filenames, sequences)
+        save_df_to_fasta(filename, sequences)
     else:
         raise TypeError("Unsupported format of sequences. Use SeqRecord, list of SeqRecords or pd.DataFrame.")
 
@@ -39,7 +58,7 @@ def save_df_to_fasta(filename, seq_df):
     logging.info("save_to_fasta(): Going to save sequences to file {}".format(filename))
 
     with open(filename, 'w') as handle:
-        for index, record in tqdm(seq_df.iterrows()):
+        for index, record in seq_df.iterrows():
 
             # check if record contains sequence
             #  - there might be some loci from scaffolds that was not found in fasta file
@@ -47,7 +66,7 @@ def save_df_to_fasta(filename, seq_df):
                 SeqIO.write(
                     SeqRecord(
                         Seq(record.seq),
-                        record.so_name + '_' + record.seq_region_name + ":" + str(record.seq_region_start) + ".." + str(
+                            record.seq_region_name + ":" + str(record.seq_region_start) + ".." + str(
                             record.seq_region_end),
                         description=""
                     ),
@@ -56,22 +75,6 @@ def save_df_to_fasta(filename, seq_df):
                 )
 
     logging.info("save_to_fasta(): Sequences saved to file {}".format(filename))
-
-
-class File:
-    """Wrapper class around basic python file handling.
-
-    Created to override write() method and add newline at the end of every write()
-    """
-
-    def __init__(self, name, mode='w'):
-        self.f = open(name, mode, buffering=1)
-
-    def write(self, string, newline=True):
-        if newline:
-            self.f.write(string + '\n')
-        else:
-            self.f.write(string)
 
 
 def download_file(url, local_path):
@@ -103,15 +106,6 @@ def get_2bit_genome_file(organism, local_dir='../../ensembl_data/2bit/'):
     download_2bit_file(genome_name, local_dir)
     twobit_path = os.path.join(local_dir, genome_name + '.2bit')
     return TwoBitFile(twobit_path)
-
-
-def convert_df_to_format_for_twobitreader(df):
-    seqs_loci = df[['seq_region_name', 'seq_region_start', 'seq_region_end']].values.tolist()
-
-    if df['seq_region_name'][0].startswith('chr'):
-        return [' '.join(str(x) for x in line) for line in seqs_loci]
-    else:
-        return ['chr' + ' '.join(str(x) for x in line) for line in seqs_loci]
 
 
 def get_2bit_file_name(organism):

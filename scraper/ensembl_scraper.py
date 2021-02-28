@@ -1,11 +1,12 @@
 import pandas as pd
 from tqdm import tqdm
-from twobitreader import twobit_reader
 import logging
-from scraper.utils import File, download_file, get_2bit_genome_file, make_dir, convert_df_to_format_for_twobitreader, config
-from scraper.random_negatives import generate_negatives_and_save_to_fasta
+from pathlib import Path
+from utils import download_file, get_2bit_genome_file, make_dir, config, save_to_fasta, save_test_to_fasta
+from random_negatives import generate_negatives
+from preprocessing import remove_low_quality, split_train_val_test
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 
 def get_supported_organisms():
@@ -54,20 +55,27 @@ def parse_feature_file(path, feature):
     return df
 
 
-def find_sequences_and_save_to_fasta(organism, seqs, out_dir, local_dir='../../ensembl_data/2bit/'):
+def find_sequences(organism, seqs):
 
-    feature_column_name = get_feature_column_name(seqs.keys())
-    feature_type = seqs[feature_column_name][0]
-    logging.info('find_sequences_and_save_to_fasta(): '
-                 'Going to find sequences based on genomic loci and save results to fasta file. '
-                 'Organism: {}, Feature type: {}'.format(organism, feature_type))
+    logging.info('find_sequences_and_save_to_fasta(): Going to find sequences based on genomic loci.')
 
-    seqs_loci_list = convert_df_to_format_for_twobitreader(seqs)
-    fasta_handle = File(out_dir + 'positive.fa')
-    genome = get_2bit_genome_file(organism, local_dir)
-    twobit_reader(genome, seqs_loci_list, fasta_handle.write)
+    genome = get_2bit_genome_file(organism)
+    num_seqs = len(seqs)
 
-    logging.info('find_sequences_and_save_to_fasta(): Done finding sequences and saving them to fasta file.')
+    seqs['seq'] = ''
+    seqs['seq_region_name'] = 'chr' + seqs['seq_region_name']
+    for i in range(num_seqs):
+        chrom = seqs.iloc[i]['seq_region_name']
+        if chrom not in genome:
+            logging.debug('Chromosome {} not in 2bit genome. Skipping this line.'.format(chrom))
+            continue
+
+        start = seqs.iloc[i]['seq_region_start']
+        end = seqs.iloc[i]['seq_region_end']
+        seqs.at[i, 'seq'] = genome[chrom][start:end]
+
+    logging.info('find_sequences_and_save_to_fasta(): Done finding sequences.')
+    return seqs
 
 
 if __name__ == '__main__':
@@ -75,7 +83,6 @@ if __name__ == '__main__':
     organisms = get_supported_organisms()
     for o in tqdm(organisms, desc='Processing organisms'):
 
-        #features = get_supported_features(o)
         features = ['regulatory_feature', 'mirna_target_feature', 'external_feature']
         for f in tqdm(features, desc='Processing feature files'):
 
@@ -91,10 +98,28 @@ if __name__ == '__main__':
             feature_types = seqs[feature_column_name].unique()
             for feature_type in tqdm(feature_types, desc='Processing feature types'):
 
+                # get rows for current feature
                 feature_seqs = seqs[seqs[feature_column_name] == feature_type].copy()
+                # drop column with feature name - there is only one value
+                feature_seqs.drop(feature_column_name, axis=1, inplace=True)
+                # reset indexing to go from 0 with step 1 (filtering on feature type left spaces in indices)
                 feature_seqs = feature_seqs.reset_index(drop=True)
 
-                out_dir = '../../ensembl_data/result/' + o + '/' + f + '_' + feature_type + '/'
+                out_dir = '../../ensembl_data_test/result/' + o + '/' + f + '_' + feature_type + '/'
                 make_dir(out_dir)
-                find_sequences_and_save_to_fasta(o, feature_seqs, out_dir)
-                generate_negatives_and_save_to_fasta(o, feature_seqs, out_dir)
+
+                positive_seqs = find_sequences(o, feature_seqs)
+                preprocessed_positive_seqs = remove_low_quality(positive_seqs)
+                positive_train, positive_val, positive_test = split_train_val_test(preprocessed_positive_seqs)
+                save_to_fasta(Path(out_dir, 'positive_train.fa'), positive_train)
+                save_to_fasta(Path(out_dir, 'positive_valid.fa'), positive_val)
+
+                negative_seqs = generate_negatives(o, preprocessed_positive_seqs)
+                # we don't need to preprocess negative sequences since we are generating them
+                # to match already preprocessed positive sequences
+                negative_train, negative_val, negative_test = split_train_val_test(negative_seqs)
+                save_to_fasta(Path(out_dir, 'negative_train.fa'), negative_train)
+                save_to_fasta(Path(out_dir, 'negative_valid.fa'), negative_val)
+
+                # save test sequences separately - we don't want to expose information about positive/negative
+                save_test_to_fasta(Path(out_dir, 'test.fa'), positive_test, negative_test)

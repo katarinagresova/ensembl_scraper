@@ -1,11 +1,6 @@
-from Bio import SeqIO
-from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
-
 from scraper.utils import get_2bit_genome_file
 import pandas as pd
 import numpy as np
-import os
 
 MIN_CHROM_LENGTH = 100000
 
@@ -49,33 +44,19 @@ def get_random_pos(df_forbidden: pd.DataFrame, chr_names_and_lengths, offset_fro
     return c, pos
 
 
-def generate_negatives_and_save_to_fasta(organism, excluded_seqs: pd.DataFrame, out_dir, local_dir='../../ensembl_data/2bit/'):
+def generate_negatives(organism, excluded_seqs: pd.DataFrame):
     chr_names_and_lengths = get_chr_names_and_lengths(organism)
     num_seqs = len(excluded_seqs)
 
     genome = get_2bit_genome_file(organism)
-    with open(out_dir + 'negative.fa', 'w') as handle:
-        try:
-            for i in range(num_seqs):
-                while True:
-                    seq_length = int(excluded_seqs['seq_region_end'][i]) - int(excluded_seqs['seq_region_start'][i])
-                    chrom, start = get_random_pos(excluded_seqs, chr_names_and_lengths, seq_length)
-                    end = start + seq_length
-                    seq = genome[chrom][start:end]
-                    if 'N' not in seq.upper():
-                        SeqIO.write(
-                            SeqRecord(
-                                Seq(seq),
-                                chrom + ':' + str(start) + '-' + str(end),
-                                description=""
-                            ),
-                            handle,
-                            'fasta'
-                        )
-                    break
-        except:
-            # close and delete the file, so we don't have partial results that look like full results
-            # the ctx manager will try to close the file again, but that's harmless.
-            handle.close()
-            os.remove(out_dir + 'negative.fa')
-            raise
+    seqs = [None] * num_seqs
+    for i in range(num_seqs):
+        while True:
+            seq_length = int(excluded_seqs['seq_region_end'][i]) - int(excluded_seqs['seq_region_start'][i])
+            chrom, start = get_random_pos(excluded_seqs, chr_names_and_lengths, seq_length)
+            end = start + seq_length
+            seq = genome[chrom][start:end]
+            if 'N' not in seq.upper():
+                seqs[i] = [seq, chrom, start, end]
+                break
+    return pd.DataFrame(seqs, columns=['seq', 'seq_region_name', 'seq_region_start', 'seq_region_end'])
