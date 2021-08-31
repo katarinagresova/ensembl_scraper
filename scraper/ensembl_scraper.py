@@ -2,18 +2,39 @@ import pandas as pd
 from tqdm import tqdm
 import logging
 from pathlib import Path
-from utils import download_file, get_2bit_genome_file, make_dir, config, save_to_fasta, save_test_to_fasta
+from utils import download_file, get_2bit_genome_file, prepare_data_directory, config, save_to_fasta, save_test_to_fasta
 from random_negatives import generate_negatives
 from preprocessing import remove_low_quality, split_train_val_test
 
 logging.basicConfig(level=logging.INFO)
+# TODO: make root dir input parameter
+ROOT_DIR = '../../ensembl_data/'
 
 
-def get_supported_organisms():
+def get_supported_organisms() -> list:
+    """Get list of all supported organisms specified in a config file.
+
+    Returns
+    -------
+    list
+        a list of supported organisms
+    """
     return list(config['organisms'].keys())
 
 
-def get_fasta_path(organism):
+def get_fasta_path(organism: str) -> str:
+    """Get Ensembl URL for fasta file of given organism
+
+    Parameters
+    ----------
+    organism : str
+        name of organism
+
+    Returns
+    -------
+    str
+        URL for fasta file
+    """
     ensembl_ftp = config['global']['ensembl_ftp']
     release = str(config['global']['release'])
     fasta_file = config['organisms'][organism]['fasta_file']
@@ -21,11 +42,40 @@ def get_fasta_path(organism):
     return ensembl_ftp + 'release-' + release + '/fasta/' + organism + '/dna/' + fasta_file
 
 
-def get_supported_features(organism):
+def get_supported_features(organism: str) -> list:
+    """Get list of all supported features for given organism specified in a config file.
+
+    Features correspond to different classes of regulatory data stored in Ensembl.
+    In generals, this data contain regions that are predicted to regulate gene expression.
+    More at http://www.ensembl.org/info/genome/funcgen/index.html.
+
+    Parameters
+    ----------
+    organism : str
+        name of organism
+
+    Returns
+    -------
+    list
+        a list of supported features
+    """
     return list(config['organisms'][organism]['features'].keys())
 
 
-def get_feature_path(organism, feature):
+def get_feature_path(organism: str, feature: str) -> str:
+    """Get Ensembl URL for txt.gz file with data about feature class of given organism
+
+    Parameters
+    ----------
+    organism : str
+        name of organism
+    feature : str
+        name of feature class
+    Returns
+    -------
+    str
+        URL for txt.gz file
+    """
     ensembl_ftp = config['global']['ensembl_ftp']
     release = str(config['global']['release'])
     feature_file = config['organisms'][organism]['features'][feature]['file']
@@ -33,17 +83,65 @@ def get_feature_path(organism, feature):
     return ensembl_ftp + 'release-' + release + '/mysql/regulation_mart_' + release + '/' + feature_file
 
 
-def get_feature_column_name(columns):
+def get_column_names(feature: str) -> list:
+    """Get list column names for given feature
+
+    Parameters
+    ----------
+    feature : str
+        name of feature class
+
+    Returns
+    -------
+    list
+        a list of column names
+    """
+    return config['global']['features'][feature]['columns']
+
+
+def get_feature_column_name(columns: list) -> str:
+    """Get name of column that contains name of feature type
+
+    Each feature class has s lightly different data structure - different column is storing information about type of
+    feature.
+
+    Parameters
+    ----------
+    columns : list
+        list of columns
+
+    Returns
+    -------
+    str
+        column containing name of feature type
+    """
     feature_column_name = 'so_name'
     if feature_column_name not in columns:
         feature_column_name = 'feature_type_name'
     return feature_column_name
 
 
-def parse_feature_file(path, feature):
+def parse_feature_file(path: str, feature: str) -> pd.DataFrame:
+    """Parse file with with feature class data
+
+    Ensembl feature class file contains many unnecessary columns for this purpose. We only need chromosome, start
+    position and end position to retrieve corresponding DNA sequence.
+
+    Parameters
+    ----------
+    path : str
+        local path to downloaded file with feature class data
+    feature: str
+        name of feature class
+
+    Returns
+    -------
+    pd.DataFrame
+        dataframe with parsed info about positions on chromosomes
+    """
     logging.info("parse_feature_file(): Going to parse file {}".format(path))
 
-    header_list = config['global']['features'][feature]['columns']
+    header_list = get_column_names(feature)
     feature_column_name = get_feature_column_name(header_list)
     needed_cols = [feature_column_name, 'seq_region_name', 'seq_region_start', 'seq_region_end']
     logging.debug("parse_feature_file(): Using headers: {}".format(header_list))
@@ -55,8 +153,24 @@ def parse_feature_file(path, feature):
     return df
 
 
-def find_sequences(organism, seqs):
+def find_sequences(organism: str, seqs: pd.DataFrame) -> pd.DataFrame:
+    """Find DNA sequences for given positions on chromosomes
 
+    Genome of organism is stored in .2bit file (more at https://genome.ucsc.edu/FAQ/FAQformat.html#format7). Input
+    *seqs* dataframe is enriched with 'seq' column containing DNA sequence for each given chromosome and position.
+
+    Parameters
+    ----------
+    organism : str
+        name of organism
+    seqs: pd.DataFrame
+        dataframe with parsed info about positions on chromosomes
+
+    Returns
+    -------
+    pd.DataFrame
+        dataframe with positions on chromosomes and corresponding DNA sequences
+    """
     logging.info('find_sequences_and_save_to_fasta(): Going to find sequences based on genomic loci.')
 
     genome = get_2bit_genome_file(organism)
@@ -78,48 +192,119 @@ def find_sequences(organism, seqs):
     return seqs
 
 
-if __name__ == '__main__':
+def make_dataset_from_loci(feature_loci: pd.DataFrame, organism: str, out_dir: str) -> None:
+    """Create dataset based on provided loci
 
+    1) Corresponding DNA sequences are retrieved based on loci information from genome of organism.
+    2) Low quality sequences are removed.
+    3) Remaining sequences are split into train, validation and test parts.
+    4) For each DNA sequence, new random sequence is generated. This sequence is from the same genome, but cannot
+        intersect with original sequence. We get negative dataset (dataset containing sequences that do not represent
+        selected feature) in this way.
+    5) Sequences in negative dataset are also split into train, validation and test parts.
+    6) Sequences are saved into fasta files. Six files are created:
+         - positive_train.fa
+         - positive_valid.fa
+         - negative_train.da
+         - negative_valid.fa
+         - test.fa
+         - test_with_labels.fa
+        File test.fa is for testing purposes and it doesn't contain labels for sequences. To verify your results, you
+        can use file test_with_labels.fa.
+
+    Parameters
+    ----------
+    feature_loci : pd.DataFrame
+        dataframe with loci for one feature
+    organism: str
+        name of organism
+    out_dir: str
+        path to directory for storing data
+    """
+    positive_seqs = find_sequences(organism, feature_loci)
+    preprocessed_positive_seqs = remove_low_quality(positive_seqs)
+    positive_train, positive_val, positive_test = split_train_val_test(preprocessed_positive_seqs)
+    save_to_fasta(Path(out_dir, 'positive_train.fa'), positive_train)
+    save_to_fasta(Path(out_dir, 'positive_valid.fa'), positive_val)
+
+    negative_seqs = generate_negatives(organism, preprocessed_positive_seqs)
+    # we don't need to preprocess negative sequences since we are generating them
+    # to match already preprocessed positive sequences
+    negative_train, negative_val, negative_test = split_train_val_test(negative_seqs)
+    save_to_fasta(Path(out_dir, 'negative_train.fa'), negative_train)
+    save_to_fasta(Path(out_dir, 'negative_valid.fa'), negative_val)
+
+    # save test sequences separately - we don't want to expose information about positive/negative
+    save_test_to_fasta(Path(out_dir, 'test.fa'), positive_test, negative_test)
+
+
+def extract_feature_type_loci(seqs: pd.DataFrame, feature_type: str) -> pd.DataFrame:
+    """Get loci of selected feature type from dataframe containing loci of all feature types
+
+    Parameters
+    ----------
+    seqs : pd.DataFrame
+        dataframe with loci for all features of some feature class
+    feature_type: str
+        name of feature
+
+    Returns
+    -------
+    pd.DataFrame
+        dataframe with feature name, chromosome name, start position and end position
+    """
+    feature_column_name = get_feature_column_name(list(seqs.keys()))
+    # get rows for current feature
+    feature_loci = seqs[seqs[feature_column_name] == feature_type].copy()
+    # drop column with feature name - there is only one value
+    feature_loci.drop(feature_column_name, axis=1, inplace=True)
+    # reset indexing to go from 0 with step 1 (filtering on feature type left spaces in indices)
+    return feature_loci.reset_index(drop=True)
+
+
+def get_feature_class_loci(organism: str, feature: str) -> pd.DataFrame:
+    """Get loci of selected feature class for selected organism
+
+    Parameters
+    ----------
+    organism : str
+        name of organism
+    feature: str
+        name of feature class
+
+    Returns
+    -------
+    pd.DataFrame
+        dataframe with feature name, chromosome name, start position and end position
+    """
+    feature_path = get_feature_path(organism, feature)
+    local_feature = ROOT_DIR + '/feature/' + organism + '_' + feature + '.txt.gz'
+    download_file(feature_path, local_feature)
+
+    seqs = parse_feature_file(local_feature, feature)
+    # fix for difference in 0/1-based coordinates in retrieved loci and used genome
+    seqs['seq_region_start'] = seqs['seq_region_start'] - 1
+
+    return seqs
+
+
+def main():
     organisms = get_supported_organisms()
     for o in tqdm(organisms, desc='Processing organisms'):
 
-        features = ['regulatory_feature', 'mirna_target_feature', 'external_feature']
-        for f in tqdm(features, desc='Processing feature files'):
+        feature_classes = get_supported_features(o)
+        for f in tqdm(feature_classes, desc='Processing feature files'):
 
-            feature_path = get_feature_path(o, f)
-            local_feature = '../../ensembl_data/feature/' + o + '_' + f + '.txt.gz'
-            download_file(feature_path, local_feature)
-
-            seqs = parse_feature_file(local_feature, f)
-            # fix for difference in 0/1-based coordinates in retrieved loci and used genome
-            seqs['seq_region_start'] = seqs['seq_region_start'] - 1
-
-            feature_column_name = get_feature_column_name(seqs.keys())
+            seqs = get_feature_class_loci(o, f)
+            feature_column_name = get_feature_column_name(list(seqs.keys()))
             feature_types = seqs[feature_column_name].unique()
             for feature_type in tqdm(feature_types, desc='Processing feature types'):
 
-                # get rows for current feature
-                feature_seqs = seqs[seqs[feature_column_name] == feature_type].copy()
-                # drop column with feature name - there is only one value
-                feature_seqs.drop(feature_column_name, axis=1, inplace=True)
-                # reset indexing to go from 0 with step 1 (filtering on feature type left spaces in indices)
-                feature_seqs = feature_seqs.reset_index(drop=True)
+                out_dir = prepare_data_directory(ROOT_DIR, o, f, feature_type)
+                feature_loci = extract_feature_type_loci(seqs, feature_type)
+                make_dataset_from_loci(feature_loci, o, out_dir)
 
-                out_dir = '../../ensembl_data_test/result/' + o + '/' + f + '_' + feature_type + '/'
-                make_dir(out_dir)
 
-                positive_seqs = find_sequences(o, feature_seqs)
-                preprocessed_positive_seqs = remove_low_quality(positive_seqs)
-                positive_train, positive_val, positive_test = split_train_val_test(preprocessed_positive_seqs)
-                save_to_fasta(Path(out_dir, 'positive_train.fa'), positive_train)
-                save_to_fasta(Path(out_dir, 'positive_valid.fa'), positive_val)
+if __name__ == '__main__':
+    main()
 
-                negative_seqs = generate_negatives(o, preprocessed_positive_seqs)
-                # we don't need to preprocess negative sequences since we are generating them
-                # to match already preprocessed positive sequences
-                negative_train, negative_val, negative_test = split_train_val_test(negative_seqs)
-                save_to_fasta(Path(out_dir, 'negative_train.fa'), negative_train)
-                save_to_fasta(Path(out_dir, 'negative_valid.fa'), negative_val)
-
-                # save test sequences separately - we don't want to expose information about positive/negative
-                save_test_to_fasta(Path(out_dir, 'test.fa'), positive_test, negative_test)

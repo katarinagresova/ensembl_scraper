@@ -19,6 +19,12 @@ def make_dir(dir):
   Path(dir).mkdir(parents=True, exist_ok=True)
 
 
+def prepare_data_directory(root_dir: str, organism: str, feature: str, feature_type: str) -> str:
+    out_dir = root_dir + '/result/' + organism + '/' + feature + '_' + feature_type + '/'
+    make_dir(out_dir)
+    return out_dir
+
+
 def save_test_to_fasta(filename, positives, negatives):
     positives.loc[:, 'positive'] = 1
     negatives.loc[:, 'positive'] = 0
