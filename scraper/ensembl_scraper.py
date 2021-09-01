@@ -2,123 +2,13 @@ import pandas as pd
 from tqdm import tqdm
 import logging
 from pathlib import Path
-from utils import download_file, get_2bit_genome_file, prepare_temp_directory, prepare_data_directory, config, save_to_fasta, save_test_to_fasta
+from utils import download_file, get_2bit_genome_file, prepare_temp_directory, prepare_data_directory, save_to_fasta, save_test_to_fasta
+from config import get_column_names, get_feature_column_name, get_feature_path
 from random_negatives import generate_negatives
 from preprocessing import remove_low_quality, split_train_val_test
-import pyfiglet
-import yaml
+from cli import get_user_inputs
 
 logging.basicConfig(level=logging.INFO)
-
-
-def get_supported_organisms() -> list:
-    """Get list of all supported organisms specified in a config file.
-
-    Returns
-    -------
-    list
-        a list of supported organisms
-    """
-    return list(config['organisms'].keys())
-
-
-def get_fasta_path(organism: str) -> str:
-    """Get Ensembl URL for fasta file of given organism
-
-    Parameters
-    ----------
-    organism : str
-        name of organism
-
-    Returns
-    -------
-    str
-        URL for fasta file
-    """
-    ensembl_ftp = config['global']['ensembl_ftp']
-    release = str(config['global']['release'])
-    fasta_file = config['organisms'][organism]['fasta_file']
-
-    return ensembl_ftp + 'release-' + release + '/fasta/' + organism + '/dna/' + fasta_file
-
-
-def get_supported_features(organism: str) -> list:
-    """Get list of all supported features for given organism specified in a config file.
-
-    Features correspond to different classes of regulatory data stored in Ensembl.
-    In generals, this data contain regions that are predicted to regulate gene expression.
-    More at http://www.ensembl.org/info/genome/funcgen/index.html.
-
-    Parameters
-    ----------
-    organism : str
-        name of organism
-
-    Returns
-    -------
-    list
-        a list of supported features
-    """
-    return list(config['organisms'][organism]['features'].keys())
-
-
-def get_feature_path(organism: str, feature: str) -> str:
-    """Get Ensembl URL for txt.gz file with data about feature class of given organism
-
-    Parameters
-    ----------
-    organism : str
-        name of organism
-    feature : str
-        name of feature class
-    Returns
-    -------
-    str
-        URL for txt.gz file
-    """
-    ensembl_ftp = config['global']['ensembl_ftp']
-    release = str(config['global']['release'])
-    feature_file = config['organisms'][organism]['features'][feature]['file']
-
-    return ensembl_ftp + 'release-' + release + '/mysql/regulation_mart_' + release + '/' + feature_file
-
-
-def get_column_names(feature: str) -> list:
-    """Get list column names for given feature
-
-    Parameters
-    ----------
-    feature : str
-        name of feature class
-
-    Returns
-    -------
-    list
-        a list of column names
-    """
-    return config['global']['features'][feature]['columns']
-
-
-def get_feature_column_name(columns: list) -> str:
-    """Get name of column that contains name of feature type
-
-    Each feature class has s lightly different data structure - different column is storing information about type of
-    feature.
-
-    Parameters
-    ----------
-    columns : list
-        list of columns
-
-    Returns
-    -------
-    str
-        column containing name of feature type
-    """
-    feature_column_name = 'so_name'
-    if feature_column_name not in columns:
-        feature_column_name = 'feature_type_name'
-    return feature_column_name
 
 
 def parse_feature_file(path: str, feature: str) -> pd.DataFrame:
@@ -300,76 +190,8 @@ def make_feature_dataset_for_organism(organism: str, feature: str, root_dir: str
         make_dataset_from_loci(feature_loci, organism, out_dir)
 
 
-def verify_input(user_input: str, supported_names) -> list:
-
-    if user_input.strip() == '*':
-        return supported_names
-
-    parts = user_input.strip().split(' ')
-    for part in parts:
-        if part not in supported_names:
-            return list()
-
-    return parts
-
-
 def main():
-    ascii_banner = pyfiglet.figlet_format("Ensembl scraper")
-    print(ascii_banner)
-
-    user_input = dict()
-
-    while True:
-
-        print("Please select organisms you are interested in. Supported organisms are: "
-              + str(get_supported_organisms()))
-        organisms = input("Write names of organisms separated by space. Use '*' for all: ")
-        organisms = verify_input(organisms, get_supported_organisms())
-        if organisms:
-            break
-        print("Unrecognized organism. Please try again.")
-        print('')
-
-    print('')
-    print("Organisms selected: " + str(organisms))
-    print("Now you can select feature classes for each organism.")
-
-    for organism in organisms:
-
-        while True:
-
-            print('=========================')
-            print(organism)
-            print('=========================')
-            print("Supported feature classes are: " + str(get_supported_features(organism)))
-            features = input("Write names of feature_classes separated by space. Use '*' for all: ")
-            features = verify_input(features, get_supported_features(organism))
-            if features:
-                break
-            print("Unrecognized feature class. Please try again.")
-            print('')
-
-        user_input[organism] = features
-
-    print('')
-    print('=========================')
-    print('Selected settings')
-    print('=========================')
-    print(yaml.dump(user_input))
-    print('')
-
-    print('One more thing.')
-
-    while True:
-        root_dir = input('Please enter path to directory, where this program can create folders and store data: ')
-        if Path(root_dir).exists():
-            break
-        print("Path doesn't exist. Please try again.")
-        print('')
-
-    print('')
-    input('All done. Confirm by any input to start.')
-    print('')
+    user_input, root_dir = get_user_inputs()
 
     for o in tqdm(user_input.keys(), desc='Processing organisms'):
         for f in tqdm(user_input[o], desc='Processing feature files'):

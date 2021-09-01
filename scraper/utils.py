@@ -1,6 +1,5 @@
 import os
 import urllib.request
-import yaml
 from Bio.Seq import Seq
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
@@ -9,10 +8,6 @@ from twobitreader import TwoBitFile
 from twobitreader.download import save_genome
 from pathlib import Path
 import pandas as pd
-
-CONFIG_FILE = '../config.yaml'
-with open(CONFIG_FILE, "r") as ymlfile:
-    config = yaml.load(ymlfile, Loader=yaml.FullLoader)
 
 
 def make_dir(dir):
