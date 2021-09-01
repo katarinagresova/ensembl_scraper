@@ -2,13 +2,13 @@ import pandas as pd
 from tqdm import tqdm
 import logging
 from pathlib import Path
-from utils import download_file, get_2bit_genome_file, prepare_data_directory, config, save_to_fasta, save_test_to_fasta
+from utils import download_file, get_2bit_genome_file, prepare_temp_directory, prepare_data_directory, config, save_to_fasta, save_test_to_fasta
 from random_negatives import generate_negatives
 from preprocessing import remove_low_quality, split_train_val_test
+import pyfiglet
+import yaml
 
 logging.basicConfig(level=logging.INFO)
-# TODO: make root dir input parameter
-ROOT_DIR = '../../ensembl_data/'
 
 
 def get_supported_organisms() -> list:
@@ -262,7 +262,7 @@ def extract_feature_type_loci(seqs: pd.DataFrame, feature_type: str) -> pd.DataF
     return feature_loci.reset_index(drop=True)
 
 
-def get_feature_class_loci(organism: str, feature: str) -> pd.DataFrame:
+def get_feature_class_loci(organism: str, feature: str, root_dir: str) -> pd.DataFrame:
     """Get loci of selected feature class for selected organism
 
     Parameters
@@ -278,7 +278,9 @@ def get_feature_class_loci(organism: str, feature: str) -> pd.DataFrame:
         dataframe with feature name, chromosome name, start position and end position
     """
     feature_path = get_feature_path(organism, feature)
-    local_feature = ROOT_DIR + '/feature/' + organism + '_' + feature + '.txt.gz'
+
+    temp_dir = prepare_temp_directory(root_dir)
+    local_feature = temp_dir + organism + '_' + feature + '.txt.gz'
     download_file(feature_path, local_feature)
 
     seqs = parse_feature_file(local_feature, feature)
@@ -288,21 +290,90 @@ def get_feature_class_loci(organism: str, feature: str) -> pd.DataFrame:
     return seqs
 
 
+def make_feature_dataset_for_organism(organism: str, feature: str, root_dir: str):
+    seqs = get_feature_class_loci(organism, feature, root_dir)
+    feature_column_name = get_feature_column_name(list(seqs.keys()))
+    feature_types = seqs[feature_column_name].unique()
+    for feature_type in tqdm(feature_types, desc='Processing feature types'):
+        out_dir = prepare_data_directory(root_dir, organism, feature, feature_type)
+        feature_loci = extract_feature_type_loci(seqs, feature_type)
+        make_dataset_from_loci(feature_loci, organism, out_dir)
+
+
+def verify_input(user_input: str, supported_names) -> list:
+
+    if user_input.strip() == '*':
+        return supported_names
+
+    parts = user_input.strip().split(' ')
+    for part in parts:
+        if part not in supported_names:
+            return list()
+
+    return parts
+
+
 def main():
-    organisms = get_supported_organisms()
-    for o in tqdm(organisms, desc='Processing organisms'):
+    ascii_banner = pyfiglet.figlet_format("Ensembl scraper")
+    print(ascii_banner)
 
-        feature_classes = get_supported_features(o)
-        for f in tqdm(feature_classes, desc='Processing feature files'):
+    user_input = dict()
 
-            seqs = get_feature_class_loci(o, f)
-            feature_column_name = get_feature_column_name(list(seqs.keys()))
-            feature_types = seqs[feature_column_name].unique()
-            for feature_type in tqdm(feature_types, desc='Processing feature types'):
+    while True:
 
-                out_dir = prepare_data_directory(ROOT_DIR, o, f, feature_type)
-                feature_loci = extract_feature_type_loci(seqs, feature_type)
-                make_dataset_from_loci(feature_loci, o, out_dir)
+        print("Please select organisms you are interested in. Supported organisms are: "
+              + str(get_supported_organisms()))
+        organisms = input("Write names of organisms separated by space. Use '*' for all: ")
+        organisms = verify_input(organisms, get_supported_organisms())
+        if organisms:
+            break
+        print("Unrecognized organism. Please try again.")
+        print('')
+
+    print('')
+    print("Organisms selected: " + str(organisms))
+    print("Now you can select feature classes for each organism.")
+
+    for organism in organisms:
+
+        while True:
+
+            print('=========================')
+            print(organism)
+            print('=========================')
+            print("Supported feature classes are: " + str(get_supported_features(organism)))
+            features = input("Write names of feature_classes separated by space. Use '*' for all: ")
+            features = verify_input(features, get_supported_features(organism))
+            if features:
+                break
+            print("Unrecognized feature class. Please try again.")
+            print('')
+
+        user_input[organism] = features
+
+    print('')
+    print('=========================')
+    print('Selected settings')
+    print('=========================')
+    print(yaml.dump(user_input))
+    print('')
+
+    print('One more thing.')
+
+    while True:
+        root_dir = input('Please enter path to directory, where this program can create folders and store data: ')
+        if Path(root_dir).exists():
+            break
+        print("Path doesn't exist. Please try again.")
+        print('')
+
+    print('')
+    input('All done. Confirm by any input to start.')
+    print('')
+
+    for o in tqdm(user_input.keys(), desc='Processing organisms'):
+        for f in tqdm(user_input[o], desc='Processing feature files'):
+            make_feature_dataset_for_organism(o, f, root_dir)
 
 
 if __name__ == '__main__':

@@ -1,7 +1,7 @@
 from sklearn.model_selection import train_test_split
 from pathlib import Path
 import numpy as np
-from scraper.utils import save_to_fasta
+from utils import save_to_fasta
 import logging
 
 
