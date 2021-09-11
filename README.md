@@ -1,1 +1,8 @@
-# ensembl_scraper
+# Ensemble scraper
+
+> Get all functional elements datasets you ever wanted.
+
+Ensemble scraper is command-line tool for accessing data from Ensemble and creating datasets from them. 
+
+[Ensembl](https://www.ensembl.org/index.html) is a genome browser for vertebrate genomes that supports research in comparative genomics, evolution, sequence variation and transcriptional regulation. Ensembl annotate genes, computes multiple alignments, predicts regulatory function and collects disease data.
+
