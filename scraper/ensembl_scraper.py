@@ -1,7 +1,7 @@
 import pandas as pd
 from tqdm import tqdm
 import logging
-from utils import download_file, get_2bit_genome_file, prepare_temp_directory, prepare_data_directory, save_metadata
+from utils import download_file, get_2bit_genome_file, prepare_temp_directory, delete_temp_directory, prepare_data_directory, save_metadata
 from config import get_column_names, get_feature_column_name, get_feature_path
 from random_negatives import generate_negatives
 from preprocessing import remove_low_quality, split_to_csv
@@ -119,7 +119,6 @@ def make_dataset_from_loci(feature_loci: pd.DataFrame, organism: str, out_dir: s
     # we don't need to preprocess negative sequences since we are generating them
     # to match already preprocessed positive sequences
     split_to_csv(out_dir, "negative", negative_seqs)
-
     save_metadata(out_dir + 'metadata.yaml', organism)
 
 
@@ -147,7 +146,7 @@ def extract_feature_type_loci(seqs: pd.DataFrame, feature_type: str) -> pd.DataF
     return feature_loci.reset_index(drop=True)
 
 
-def get_feature_class_loci(organism: str, feature: str, root_dir: str) -> pd.DataFrame:
+def get_feature_class_loci(organism: str, feature: str, root_dir: str, temp_dir: str) -> pd.DataFrame:
     """Get loci of selected feature class for selected organism
 
     Parameters
@@ -160,12 +159,11 @@ def get_feature_class_loci(organism: str, feature: str, root_dir: str) -> pd.Dat
     Returns
     -------
     pd.DataFrame
-        dataframe with feature name, chromosome name, start position and end position
+        dataframe with feature name, chromosome name, start position, end position and strand
     """
     feature_path = get_feature_path(organism, feature)
 
-    temp_dir = prepare_temp_directory(root_dir)
-    local_feature = temp_dir + organism + '_' + feature + '.txt.gz'
+    local_feature = temp_dir + '/' + organism + '_' + feature + '.txt.gz'
     download_file(feature_path, local_feature)
 
     seqs = parse_feature_file(local_feature, feature)
@@ -176,13 +174,15 @@ def get_feature_class_loci(organism: str, feature: str, root_dir: str) -> pd.Dat
 
 
 def make_feature_dataset_for_organism(organism: str, feature: str, root_dir: str):
-    seqs = get_feature_class_loci(organism, feature, root_dir)
+    temp_dir = prepare_temp_directory(root_dir)
+    seqs = get_feature_class_loci(organism, feature, root_dir, temp_dir)
     feature_column_name = get_feature_column_name(list(seqs.keys()))
     feature_types = seqs[feature_column_name].unique()
     for feature_type in tqdm(feature_types, desc='Processing feature types'):
         out_dir = prepare_data_directory(root_dir, organism, feature, feature_type)
         feature_loci = extract_feature_type_loci(seqs, feature_type)
         make_dataset_from_loci(feature_loci, organism, out_dir)
+    delete_temp_directory(temp_dir)
 
 
 def main():

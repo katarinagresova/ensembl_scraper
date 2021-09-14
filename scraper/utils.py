@@ -17,10 +17,21 @@ def make_dir(dir):
 
 
 def prepare_data_directory(root_dir: str, organism: str, feature: str, feature_type: str) -> str:
-    out_dir = root_dir + '/result/' + organism + '_' + feature + '_' + feature_type + '/'
+    out_dir = root_dir + organism + '_' + feature + '_' + feature_type + '/'
     make_dir(out_dir + "/train")
     make_dir(out_dir + "/test")
     return out_dir
+
+
+def delete_temp_directory(temp_dir: str) -> None:
+    path = Path(temp_dir) # allow path to be a string
+    assert path.is_dir() # make sure it`s a folder
+    for p in reversed(list(path.glob('**/*'))): # iterate contents from leaves to root
+        if p.is_file():
+           p.unlink()
+        elif p.is_dir():
+            p.rmdir()
+    path.rmdir()
 
 
 def prepare_temp_directory(root_dir: str) -> str:
