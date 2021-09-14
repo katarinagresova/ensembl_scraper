@@ -122,6 +122,7 @@ def make_dataset_from_loci(feature_loci: pd.DataFrame, organism: str, out_dir: s
 
     save_metadata(out_dir + 'metadata.yaml', organism)
 
+
 def extract_feature_type_loci(seqs: pd.DataFrame, feature_type: str) -> pd.DataFrame:
     """Get loci of selected feature type from dataframe containing loci of all feature types
 

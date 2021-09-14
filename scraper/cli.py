@@ -2,10 +2,10 @@ import pyfiglet
 import yaml
 from pathlib import Path
 from config import get_supported_organisms, get_supported_features
+import argparse
 
 
 def verify_input(user_input: str, supported_names) -> list:
-
     if user_input.strip() == '*':
         return supported_names
 
@@ -90,8 +90,14 @@ def do_final_confirm() -> None:
     print('')
 
 
-def get_user_inputs():
+def is_valid_file(parser, arg):
+    if not Path(arg).exists():
+        parser.error("The file %s does not exist!" % arg)
+    else:
+        return arg
 
+
+def get_user_inputs_interactive():
     print_banner()
     organisms = get_organisms_from_user()
     user_input = get_features_from_user(organisms)
@@ -100,3 +106,39 @@ def get_user_inputs():
     do_final_confirm()
 
     return user_input, root_dir
+
+
+def parse_user_config(file):
+    with open(file, 'r') as handle:
+        user_config = yaml.load(handle, Loader=yaml.FullLoader)
+
+    user_input = user_config['organisms']
+    for organism in user_input.keys():
+        if organism not in get_supported_organisms():
+            raise ValueError("Not supported organism " + organism + " in config file.")
+        for feature in user_input[organism]:
+            if feature not in get_supported_features(organism):
+                raise ValueError("Not supported feature " + feature + " for organism " + organism + "in config file.")
+
+    root_dir = user_config['root_dir']
+    if not Path(root_dir).exists():
+        raise ValueError("Root directory doesn't exist: " + root_dir + " .")
+
+    return user_input, root_dir
+
+
+def get_user_inputs():
+    parser = argparse.ArgumentParser(description='Ensembl scraper.')
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('-i', dest='interactive', help='Start script in interactive mood.', action='store_true')
+    group.add_argument("-c", dest="config",
+                       help="Config file with required organisms and features.", metavar="FILE",
+                       type=lambda x: is_valid_file(parser, x))
+    args = parser.parse_args()
+
+    if args.interactive:
+        return get_user_inputs_interactive()
+    else:
+        return parse_user_config(args.config)
+
+
