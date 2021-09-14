@@ -45,7 +45,7 @@ def parse_feature_file(path: str, feature: str) -> pd.DataFrame:
     return df
 
 
-def find_sequences(organism: str, seqs: pd.DataFrame) -> pd.DataFrame:
+def find_sequences(organism: str, seqs: pd.DataFrame, temp_file:str) -> pd.DataFrame:
     """Find DNA sequences for given positions on chromosomes
 
     Genome of organism is stored in .2bit file (more at https://genome.ucsc.edu/FAQ/FAQformat.html#format7). Input
@@ -65,7 +65,7 @@ def find_sequences(organism: str, seqs: pd.DataFrame) -> pd.DataFrame:
     """
     logging.info('find_sequences_and_save_to_fasta(): Going to find sequences based on genomic loci.')
 
-    genome = get_2bit_genome_file(organism)
+    genome = get_2bit_genome_file(organism, temp_file)
     num_seqs = len(seqs)
 
     seqs['seq'] = ''
@@ -83,7 +83,7 @@ def find_sequences(organism: str, seqs: pd.DataFrame) -> pd.DataFrame:
     return seqs
 
 
-def make_dataset_from_loci(feature_loci: pd.DataFrame, organism: str, out_dir: str) -> None:
+def make_dataset_from_loci(feature_loci: pd.DataFrame, organism: str, out_dir: str, temp_file:str) -> None:
     """Create dataset based on provided loci
 
     1) Corresponding DNA sequences are retrieved based on loci information from genome of organism.
@@ -111,7 +111,7 @@ def make_dataset_from_loci(feature_loci: pd.DataFrame, organism: str, out_dir: s
     out_dir: str
         path to directory for storing data
     """
-    positive_seqs = find_sequences(organism, feature_loci)
+    positive_seqs = find_sequences(organism, feature_loci, temp_file)
     preprocessed_positive_seqs = remove_low_quality(positive_seqs)
     split_to_csv(out_dir, "positive", preprocessed_positive_seqs)
 
@@ -146,7 +146,7 @@ def extract_feature_type_loci(seqs: pd.DataFrame, feature_type: str) -> pd.DataF
     return feature_loci.reset_index(drop=True)
 
 
-def get_feature_class_loci(organism: str, feature: str, root_dir: str, temp_dir: str) -> pd.DataFrame:
+def get_feature_class_loci(organism: str, feature: str, temp_dir: str) -> pd.DataFrame:
     """Get loci of selected feature class for selected organism
 
     Parameters
@@ -175,13 +175,13 @@ def get_feature_class_loci(organism: str, feature: str, root_dir: str, temp_dir:
 
 def make_feature_dataset_for_organism(organism: str, feature: str, root_dir: str):
     temp_dir = prepare_temp_directory(root_dir)
-    seqs = get_feature_class_loci(organism, feature, root_dir, temp_dir)
+    seqs = get_feature_class_loci(organism, feature, temp_dir)
     feature_column_name = get_feature_column_name(list(seqs.keys()))
     feature_types = seqs[feature_column_name].unique()
     for feature_type in tqdm(feature_types, desc='Processing feature types'):
         out_dir = prepare_data_directory(root_dir, organism, feature, feature_type)
         feature_loci = extract_feature_type_loci(seqs, feature_type)
-        make_dataset_from_loci(feature_loci, organism, out_dir)
+        make_dataset_from_loci(feature_loci, organism, out_dir, temp_dir)
     delete_temp_directory(temp_dir)
 
 

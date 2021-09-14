@@ -35,7 +35,7 @@ def delete_temp_directory(temp_dir: str) -> None:
 
 
 def prepare_temp_directory(root_dir: str) -> str:
-    temp_dir = root_dir + '/feature/'
+    temp_dir = root_dir + '/tmp/'
     make_dir(temp_dir)
     return temp_dir
 
@@ -112,7 +112,7 @@ def download_2bit_file(genome_name, local_dir):
         logging.info("download_2bit_file(): File for {} downloaded to path {}.".format(genome_name, os.path.join(local_dir, genome_name + '.2bit')))
 
 
-def get_2bit_genome_file(organism, local_dir='../../ensembl_data/2bit/'):
+def get_2bit_genome_file(organism, local_dir):
     genome_name = get_2bit_file_name(organism)
     download_2bit_file(genome_name, local_dir)
     twobit_path = os.path.join(local_dir, genome_name + '.2bit')
