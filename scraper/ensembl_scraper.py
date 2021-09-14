@@ -36,6 +36,9 @@ def parse_feature_file(path: str, feature: str) -> pd.DataFrame:
     logging.debug("parse_feature_file(): Using headers: {}".format(header_list))
     df = pd.read_csv(path, sep='\t', names=header_list, usecols=needed_cols)
 
+    df['seq_region_strand'] = df['seq_region_strand'].map({1: '+', 0: '-'})
+    df['seq_region_name'] = 'chr' + df['seq_region_name']
+
     logging.debug("parse_feature_file(): Kept columns: {}".format(list(df.keys())))
     logging.info("parse_feature_file(): Done parsing file {}".format(path))
 
@@ -66,7 +69,6 @@ def find_sequences(organism: str, seqs: pd.DataFrame) -> pd.DataFrame:
     num_seqs = len(seqs)
 
     seqs['seq'] = ''
-    seqs['seq_region_name'] = 'chr' + seqs['seq_region_name']
     for i in range(num_seqs):
         chrom = seqs.iloc[i]['seq_region_name']
         if chrom not in genome:

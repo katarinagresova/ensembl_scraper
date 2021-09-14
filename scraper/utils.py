@@ -29,7 +29,13 @@ def prepare_temp_directory(root_dir: str) -> str:
 
 
 def save_to_csv(path: Path, seqs: pd.DataFrame):
-    seqs.to_csv(path_or_buf=path, columns=['seq_region_name', 'seq_region_start', 'seq_region_end', 'seq_region_strand'])
+    seqs = seqs.reset_index(drop=True)
+    seqs.to_csv(
+        path_or_buf=path,
+        columns=['seq_region_name', 'seq_region_start', 'seq_region_end', 'seq_region_strand'],
+        header=['region', 'start', 'end', 'strand'],
+        index_label='id'
+    )
 
 
 def save_to_fasta(filename, sequences):
