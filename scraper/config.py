@@ -4,6 +4,7 @@ CONFIG_FILE = '../config.yaml'
 with open(CONFIG_FILE, "r") as ymlfile:
     config = yaml.load(ymlfile, Loader=yaml.FullLoader)
 
+
 def get_supported_organisms() -> list:
     """Get list of all supported organisms specified in a config file.
 

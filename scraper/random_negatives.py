@@ -57,6 +57,6 @@ def generate_negatives(organism, excluded_seqs: pd.DataFrame):
             end = start + seq_length
             seq = genome[chrom][start:end]
             if 'N' not in seq.upper():
-                seqs[i] = [seq, chrom, start, end]
+                seqs[i] = [seq, chrom, start, end, '1']
                 break
-    return pd.DataFrame(seqs, columns=['seq', 'seq_region_name', 'seq_region_start', 'seq_region_end'])
+    return pd.DataFrame(seqs, columns=['seq', 'seq_region_name', 'seq_region_start', 'seq_region_end', 'seq_region_strand'])

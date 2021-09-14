@@ -1,7 +1,7 @@
 from sklearn.model_selection import train_test_split
 from pathlib import Path
 import numpy as np
-from utils import save_to_fasta
+from utils import save_to_csv
 import logging
 
 
@@ -26,14 +26,11 @@ def split_train_val_test(data, train_ratio = 0.7, validation_ratio = 0.2, test_r
     return x_train, x_val, x_test
 
 
-def split_to_fasta(current_dir, prefix, seqs):
+def split_to_csv(current_dir, prefix, seqs):
 
-    x_train, x_val, x_test = split_train_val_test(seqs)
-    save_to_fasta(Path(current_dir, prefix + '_train.fa'), x_train)
-    save_to_fasta(Path(current_dir, prefix + '_valid.fa'), x_val)
-
-
-    save_to_fasta(Path(current_dir, prefix + '_test.fa'), x_test)
+    x_train, x_test = x_remaining, x_test = train_test_split(seqs, test_size=0.2, random_state=42)
+    save_to_csv(Path(current_dir, 'train', prefix + '.csv'), x_train)
+    save_to_csv(Path(current_dir, 'test', prefix + '.csv'), x_test)
 
 
 def reject_outliers(seqs, m = 3.):

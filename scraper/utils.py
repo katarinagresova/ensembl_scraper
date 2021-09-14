@@ -8,6 +8,7 @@ from twobitreader import TwoBitFile
 from twobitreader.download import save_genome
 from pathlib import Path
 import pandas as pd
+from config import config
 
 
 def make_dir(dir):
@@ -15,8 +16,9 @@ def make_dir(dir):
 
 
 def prepare_data_directory(root_dir: str, organism: str, feature: str, feature_type: str) -> str:
-    out_dir = root_dir + '/result/' + organism + '/' + feature + '_' + feature_type + '/'
-    make_dir(out_dir)
+    out_dir = root_dir + '/result/' + organism + '_' + feature + '_' + feature_type + '/'
+    make_dir(out_dir + "/train")
+    make_dir(out_dir + "/test")
     return out_dir
 
 
@@ -26,24 +28,8 @@ def prepare_temp_directory(root_dir: str) -> str:
     return temp_dir
 
 
-def save_test_to_fasta(filename, positives, negatives):
-    positives.loc[:, 'positive'] = 1
-    negatives.loc[:, 'positive'] = 0
-    samples = pd.concat([positives, negatives])
-
-    # shuffle samples
-    samples = samples.sample(frac=1).reset_index(drop=True)
-
-    # save positives+negatives without label
-    save_to_fasta(filename, samples)
-
-    samples.loc[samples['positive'] == 1, 'seq_region_name'] = 'positive_' + samples['seq_region_name']
-    samples.loc[samples['positive'] == 0, 'seq_region_name'] = 'negative_' + samples['seq_region_name']
-
-    # change filename of file with labels
-    filename = filename.with_name(filename.stem + '_with_labels.fa')
-    # save positives+negatives with label at beginning of ID
-    save_to_fasta(filename, samples)
+def save_to_csv(path: Path, seqs: pd.DataFrame):
+    seqs.to_csv(path_or_buf=path, columns=['seq_region_name', 'seq_region_start', 'seq_region_end', 'seq_region_strand'])
 
 
 def save_to_fasta(filename, sequences):

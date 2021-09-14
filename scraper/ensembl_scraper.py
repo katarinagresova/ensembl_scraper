@@ -1,11 +1,10 @@
 import pandas as pd
 from tqdm import tqdm
 import logging
-from pathlib import Path
-from utils import download_file, get_2bit_genome_file, prepare_temp_directory, prepare_data_directory, save_to_fasta, save_test_to_fasta
+from utils import download_file, get_2bit_genome_file, prepare_temp_directory, prepare_data_directory
 from config import get_column_names, get_feature_column_name, get_feature_path
 from random_negatives import generate_negatives
-from preprocessing import remove_low_quality, split_train_val_test
+from preprocessing import remove_low_quality, split_to_csv
 from cli import get_user_inputs
 
 logging.basicConfig(level=logging.INFO)
@@ -33,7 +32,7 @@ def parse_feature_file(path: str, feature: str) -> pd.DataFrame:
 
     header_list = get_column_names(feature)
     feature_column_name = get_feature_column_name(header_list)
-    needed_cols = [feature_column_name, 'seq_region_name', 'seq_region_start', 'seq_region_end']
+    needed_cols = [feature_column_name, 'seq_region_name', 'seq_region_start', 'seq_region_end', 'seq_region_strand']
     logging.debug("parse_feature_file(): Using headers: {}".format(header_list))
     df = pd.read_csv(path, sep='\t', names=header_list, usecols=needed_cols)
 
@@ -87,20 +86,19 @@ def make_dataset_from_loci(feature_loci: pd.DataFrame, organism: str, out_dir: s
 
     1) Corresponding DNA sequences are retrieved based on loci information from genome of organism.
     2) Low quality sequences are removed.
-    3) Remaining sequences are split into train, validation and test parts.
+    3) Remaining sequences are split into train and test parts.
     4) For each DNA sequence, new random sequence is generated. This sequence is from the same genome, but cannot
         intersect with original sequence. We get negative dataset (dataset containing sequences that do not represent
         selected feature) in this way.
-    5) Sequences in negative dataset are also split into train, validation and test parts.
-    6) Sequences are saved into fasta files. Six files are created:
-         - positive_train.fa
-         - positive_valid.fa
-         - negative_train.da
-         - negative_valid.fa
-         - test.fa
-         - test_with_labels.fa
-        File test.fa is for testing purposes and it doesn't contain labels for sequences. To verify your results, you
-        can use file test_with_labels.fa.
+    5) Sequences in negative dataset are also split into train and test parts.
+    6) Coordinates for sequences are saved into csv files. Folder structure is as follows:
+        --- train --- positive.csv
+                 |
+                  --- negative.csv
+        --- test  --- positive.csv
+                 |
+                  --- negative.csv
+        --- metadata.yaml
 
     Parameters
     ----------
@@ -113,19 +111,14 @@ def make_dataset_from_loci(feature_loci: pd.DataFrame, organism: str, out_dir: s
     """
     positive_seqs = find_sequences(organism, feature_loci)
     preprocessed_positive_seqs = remove_low_quality(positive_seqs)
-    positive_train, positive_val, positive_test = split_train_val_test(preprocessed_positive_seqs)
-    save_to_fasta(Path(out_dir, 'positive_train.fa'), positive_train)
-    save_to_fasta(Path(out_dir, 'positive_valid.fa'), positive_val)
+    split_to_csv(out_dir, "positive", preprocessed_positive_seqs)
 
     negative_seqs = generate_negatives(organism, preprocessed_positive_seqs)
     # we don't need to preprocess negative sequences since we are generating them
     # to match already preprocessed positive sequences
-    negative_train, negative_val, negative_test = split_train_val_test(negative_seqs)
-    save_to_fasta(Path(out_dir, 'negative_train.fa'), negative_train)
-    save_to_fasta(Path(out_dir, 'negative_valid.fa'), negative_val)
+    split_to_csv(out_dir, "negative", negative_seqs)
 
-    # save test sequences separately - we don't want to expose information about positive/negative
-    save_test_to_fasta(Path(out_dir, 'test.fa'), positive_test, negative_test)
+    #TODO: save medatada.yaml
 
 
 def extract_feature_type_loci(seqs: pd.DataFrame, feature_type: str) -> pd.DataFrame:
