@@ -8,7 +8,8 @@ from twobitreader import TwoBitFile
 from twobitreader.download import save_genome
 from pathlib import Path
 import pandas as pd
-from config import config
+from config import config, get_fasta_path
+import yaml
 
 
 def make_dir(dir):
@@ -109,3 +110,22 @@ def get_2bit_genome_file(organism, local_dir='../../ensembl_data/2bit/'):
 
 def get_2bit_file_name(organism):
     return config['organisms'][organism]['2bit_file_name']
+
+
+def save_metadata(filename, organism):
+    metadata = {
+        'version': 0,
+        'classes': {
+            'positive': {
+                'type': 'fa.gz',
+                'url': get_fasta_path(organism)
+            },
+            'negative': {
+                'type': 'fa.gz',
+                'url': get_fasta_path(organism)
+            }
+        }
+    }
+
+    with open(filename, 'w') as handle:
+        yaml.dump(metadata, handle)

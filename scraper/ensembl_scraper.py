@@ -1,7 +1,7 @@
 import pandas as pd
 from tqdm import tqdm
 import logging
-from utils import download_file, get_2bit_genome_file, prepare_temp_directory, prepare_data_directory
+from utils import download_file, get_2bit_genome_file, prepare_temp_directory, prepare_data_directory, save_metadata
 from config import get_column_names, get_feature_column_name, get_feature_path
 from random_negatives import generate_negatives
 from preprocessing import remove_low_quality, split_to_csv
@@ -120,8 +120,7 @@ def make_dataset_from_loci(feature_loci: pd.DataFrame, organism: str, out_dir: s
     # to match already preprocessed positive sequences
     split_to_csv(out_dir, "negative", negative_seqs)
 
-    #TODO: save medatada.yaml
-
+    save_metadata(out_dir + 'metadata.yaml', organism)
 
 def extract_feature_type_loci(seqs: pd.DataFrame, feature_type: str) -> pd.DataFrame:
     """Get loci of selected feature type from dataframe containing loci of all feature types
