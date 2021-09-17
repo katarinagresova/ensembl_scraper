@@ -1,6 +1,8 @@
 import yaml
+from pathlib import Path
 
-CONFIG_FILE = '../config.yaml'
+here = Path(__file__).parent
+CONFIG_FILE = here/'../config.yaml'
 with open(CONFIG_FILE, "r") as ymlfile:
     config = yaml.load(ymlfile, Loader=yaml.FullLoader)
 
