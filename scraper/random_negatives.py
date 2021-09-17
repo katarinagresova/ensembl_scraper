@@ -1,4 +1,4 @@
-from utils import get_2bit_genome_file
+from scraper.utils import get_2bit_genome_file
 import pandas as pd
 import numpy as np
 

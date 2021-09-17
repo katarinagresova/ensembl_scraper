@@ -13,6 +13,6 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/katarinagresova/ensembl_scraper",
     package_dir={"": "scraper"},
-    packages=setuptools.find_packages(where="scraper"),
+    packages=['scraper'],
     python_requires='>=3.6',
 )
