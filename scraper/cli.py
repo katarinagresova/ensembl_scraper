@@ -1,7 +1,7 @@
 import pyfiglet
 import yaml
 from pathlib import Path
-from config import get_supported_organisms, get_supported_features
+from scraper.config import get_supported_organisms, get_supported_features
 import argparse
 
 
