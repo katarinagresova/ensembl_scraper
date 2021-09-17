@@ -1,11 +1,11 @@
 import pandas as pd
 from tqdm import tqdm
 import logging
-from scraper.utils import download_file, get_2bit_genome_file, prepare_temp_directory, delete_temp_directory, prepare_data_directory, save_metadata
-from scraper.config import get_column_names, get_feature_column_name, get_feature_path
-from scraper.random_negatives import generate_negatives
-from scraper.preprocessing import remove_low_quality, split_to_csv
-from scraper.cli import get_user_inputs
+from utils import download_file, get_2bit_genome_file, prepare_temp_directory, delete_temp_directory, prepare_data_directory, save_metadata
+from config import get_column_names, get_feature_column_name, get_feature_path
+from random_negatives import generate_negatives
+from preprocessing import remove_low_quality, split_to_csv
+from cli import get_user_inputs
 
 logging.basicConfig(level=logging.INFO)
 

@@ -8,7 +8,7 @@ from twobitreader import TwoBitFile
 from twobitreader.download import save_genome
 from pathlib import Path
 import pandas as pd
-from scraper.config import config, get_fasta_path
+from config import config, get_fasta_path
 import yaml
 
 
