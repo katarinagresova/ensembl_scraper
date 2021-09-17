@@ -5,10 +5,10 @@ import numpy as np
 MIN_CHROM_LENGTH = 100000
 
 
-def get_chr_names_and_lengths(organism):
+def get_chr_names_and_lengths(organism, local_dir):
 
     chr_lengths = {}
-    genome = get_2bit_genome_file(organism)
+    genome = get_2bit_genome_file(organism, local_dir)
     for chromosome in genome.keys():
         length = len(genome[chromosome])
         if length > MIN_CHROM_LENGTH:
@@ -44,11 +44,11 @@ def get_random_pos(df_forbidden: pd.DataFrame, chr_names_and_lengths, offset_fro
     return c, pos
 
 
-def generate_negatives(organism, excluded_seqs: pd.DataFrame):
-    chr_names_and_lengths = get_chr_names_and_lengths(organism)
+def generate_negatives(organism, excluded_seqs: pd.DataFrame, local_dir):
+    chr_names_and_lengths = get_chr_names_and_lengths(organism, local_dir)
     num_seqs = len(excluded_seqs)
 
-    genome = get_2bit_genome_file(organism)
+    genome = get_2bit_genome_file(organism, local_dir)
     seqs = [None] * num_seqs
     for i in range(num_seqs):
         while True:

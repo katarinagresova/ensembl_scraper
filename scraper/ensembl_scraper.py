@@ -115,7 +115,7 @@ def make_dataset_from_loci(feature_loci: pd.DataFrame, organism: str, out_dir: s
     preprocessed_positive_seqs = remove_low_quality(positive_seqs)
     split_to_csv(out_dir, "positive", preprocessed_positive_seqs)
 
-    negative_seqs = generate_negatives(organism, preprocessed_positive_seqs)
+    negative_seqs = generate_negatives(organism, preprocessed_positive_seqs, temp_file)
     # we don't need to preprocess negative sequences since we are generating them
     # to match already preprocessed positive sequences
     split_to_csv(out_dir, "negative", negative_seqs)
