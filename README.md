@@ -1,6 +1,6 @@
 # Ensemble scraper
 
-> Get all functional elements datasets you ever wanted.
+> Create all functional elements datasets you ever wanted.
 
 Ensemble scraper is command-line tool for accessing data from Ensemble and creating classification datasets from them. 
 
