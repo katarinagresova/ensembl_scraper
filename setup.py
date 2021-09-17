@@ -8,7 +8,7 @@ setuptools.setup(
     version="0.0.1",
     author="Katarina Gresova",
     author_email="gresova11@gmail.com",
-    description="Get all functional elements datasets you ever wanted.",
+    description="Create all functional elements datasets you ever wanted.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/katarinagresova/ensembl_scraper",
