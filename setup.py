@@ -4,26 +4,26 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 requires = [
-    'bio'
-    'biopython'
-    'certifi'
-    'charset-normalizer'
-    'idna'
-    'joblib'
-    'numpy'
-    'pandas'
-    'plac'
-    'pyfiglet'
-    'python-dateutil'
-    'pytz'
-    'PyYAML'
-    'request'
-    'scikit-learn'
-    'scipy'
-    'six'
-    'threadpoolctl'
-    'tqdm'
-    'twobitreader'
+    'bio',
+    'biopython',
+    'certifi',
+    'charset-normalizer',
+    'idna',
+    'joblib',
+    'numpy',
+    'pandas',
+    'plac',
+    'pyfiglet',
+    'python-dateutil',
+    'pytz',
+    'PyYAML',
+    'request',
+    'scikit-learn',
+    'scipy',
+    'six',
+    'threadpoolctl',
+    'tqdm',
+    'twobitreader',
     'urllib3'
 ]
 
