@@ -3,6 +3,30 @@ import setuptools
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
+requires = [
+    'bio'
+    'biopython'
+    'certifi'
+    'charset-normalizer'
+    'idna'
+    'joblib'
+    'numpy'
+    'pandas'
+    'plac'
+    'pyfiglet'
+    'python-dateutil'
+    'pytz'
+    'PyYAML'
+    'request'
+    'scikit-learn'
+    'scipy'
+    'six'
+    'threadpoolctl'
+    'tqdm'
+    'twobitreader'
+    'urllib3'
+]
+
 setuptools.setup(
     name="scraper",
     version="0.0.1",
@@ -14,4 +38,5 @@ setuptools.setup(
     url="https://github.com/katarinagresova/ensembl_scraper",
     packages=setuptools.find_packages(include=['scraper']),
     python_requires='>=3.6',
+    install_requires=requires
 )
