@@ -17,7 +17,7 @@ requires = [
     'python-dateutil',
     'pytz',
     'PyYAML',
-    'request',
+    'requests',
     'scikit-learn',
     'scipy',
     'six',
