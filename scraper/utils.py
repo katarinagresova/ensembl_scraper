@@ -8,7 +8,7 @@ from twobitreader import TwoBitFile
 from twobitreader.download import save_genome
 from pathlib import Path
 import pandas as pd
-from config import config, get_fasta_path
+from .config import get_2bit_file_name, get_fasta_path
 import yaml
 
 
@@ -117,10 +117,6 @@ def get_2bit_genome_file(organism, local_dir):
     download_2bit_file(genome_name, local_dir)
     twobit_path = os.path.join(local_dir, genome_name + '.2bit')
     return TwoBitFile(twobit_path)
-
-
-def get_2bit_file_name(organism):
-    return config['organisms'][organism]['2bit_file_name']
 
 
 def save_metadata(filename, organism):
