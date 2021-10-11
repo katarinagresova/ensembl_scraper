@@ -1,4 +1,4 @@
-bio==0.7.7
+bio==1.2
 biopython==1.79
 certifi==2021.5.30
 charset-normalizer==2.0.4
