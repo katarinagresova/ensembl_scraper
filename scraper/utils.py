@@ -108,7 +108,7 @@ def download_2bit_file(genome_name, local_dir):
         file.close()
         logging.info("download_2bit_file(): File for {} already exists. Not going to download.".format(genome_name))
     except FileNotFoundError:
-        save_genome(genome_name, destdir=local_dir)
+        save_genome(genome_name, destdir=local_dir, mode='http')
         logging.info("download_2bit_file(): File for {} downloaded to path {}.".format(genome_name, os.path.join(local_dir, genome_name + '.2bit')))
 
 
