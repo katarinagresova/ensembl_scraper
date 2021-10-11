@@ -1,7 +1,7 @@
 from sklearn.model_selection import train_test_split
 from pathlib import Path
 import numpy as np
-from utils import save_to_csv
+from .utils import save_to_csv
 import logging
 
 
