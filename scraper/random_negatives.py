@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 
 MIN_CHROM_LENGTH = 100000
+np.random.seed(42)
 
 
 def get_chr_names_and_lengths(organism, local_dir):
