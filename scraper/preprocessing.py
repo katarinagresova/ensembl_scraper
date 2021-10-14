@@ -33,7 +33,13 @@ def split_to_csv(current_dir, prefix, seqs):
     save_to_csv(Path(current_dir, 'test', prefix + '.csv'), x_test)
 
 
-def reject_outliers(seqs, m = 3.):
+def reject_contigs(seqs):
+    # using just classic chromosomes (numbered + X, Y, MT)
+    supported_chr = [str(i) for i in range(50)] + ['X', 'Y', 'MT']
+    return seqs.loc[seqs['seq_region_name'].isin(supported_chr)]
+
+
+def reject_outliers(seqs, m=3.):
 
     lengths = np.array([len(seq.seq) for index,seq in seqs.iterrows()])
     d = np.abs(lengths - np.median(lengths))
@@ -53,6 +59,10 @@ def reject_Ns(seqs, threshold=0.05):
 def remove_low_quality(seqs):
     logging.info("remove_low_quality(): Going to preprocess sequences.")
     logging.info("remove_low_quality(): Original number of sequences: {}".format(str(len(seqs))))
+
+    seqs = reject_contigs(seqs)
+    seqs = seqs.reset_index(drop=True)
+    logging.info("remove_low_quality(): Number of sequences after contigs rejection: {}".format(str(len(seqs))))
 
     seqs = reject_outliers(seqs)
     seqs = seqs.reset_index(drop=True)
