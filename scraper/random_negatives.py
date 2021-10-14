@@ -1,6 +1,7 @@
 from .utils import get_2bit_genome_file
 import pandas as pd
 import numpy as np
+import re
 
 MIN_CHROM_LENGTH = 100000
 np.random.seed(42)
@@ -11,9 +12,11 @@ def get_chr_names_and_lengths(organism, local_dir):
     chr_lengths = {}
     genome = get_2bit_genome_file(organism, local_dir)
     for chromosome in genome.keys():
-        length = len(genome[chromosome])
-        if length > MIN_CHROM_LENGTH:
-            chr_lengths[chromosome] = len(genome[chromosome])
+        # working only with classical chromosomes chr1, chr2, .., chrX, chrY, chrMT
+        if re.match(r"^chr([1-9][0-9]*|X|Y|MT)$", chromosome):
+            length = len(genome[chromosome])
+            if length > MIN_CHROM_LENGTH:
+                chr_lengths[chromosome] = len(genome[chromosome])
 
     # check that all lengths are different from 0
     assert all(x != 0 for x in chr_lengths.values())
