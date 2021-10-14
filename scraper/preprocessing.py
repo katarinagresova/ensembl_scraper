@@ -35,7 +35,7 @@ def split_to_csv(current_dir, prefix, seqs):
 
 def reject_contigs(seqs):
     # using just classic chromosomes (numbered + X, Y, MT)
-    supported_chr = [str(i) for i in range(50)] + ['X', 'Y', 'MT']
+    supported_chr = ['chr' + str(i) for i in range(50)] + ['chrX', 'chrY', 'chrMT']
     return seqs.loc[seqs['seq_region_name'].isin(supported_chr)]
 
 
