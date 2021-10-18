@@ -37,7 +37,7 @@ def parse_feature_file(path: str, feature: str) -> pd.DataFrame:
     df = pd.read_csv(path, sep='\t', names=header_list, usecols=needed_cols, low_memory=False)
 
     # mapping strand symbols to more widely used - (+, -)
-    df['seq_region_strand'] = df['seq_region_strand'].map({1: '+', 0: '-'})
+    df['seq_region_strand'] = df['seq_region_strand'].map({1: '+', -1: '-'})
     # mapping chromosome names to format chr([1-9][0-9]*|X|Y|MT) - following 2bit file uses this format
     df['seq_region_name'] = df['seq_region_name'].apply(lambda x: 'chr' + str(x))
 
