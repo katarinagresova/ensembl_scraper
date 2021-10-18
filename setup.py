@@ -16,7 +16,7 @@ requires = [
     'pyfiglet',
     'python-dateutil',
     'pytz',
-    'PyYAML',
+    'PyYAML>=5.4.1',
     'requests',
     'scikit-learn',
     'scipy',
