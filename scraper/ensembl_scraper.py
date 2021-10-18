@@ -65,7 +65,7 @@ def find_sequences(organism: str, seqs: pd.DataFrame, temp_file:str) -> pd.DataF
     pd.DataFrame
         dataframe with positions on chromosomes and corresponding DNA sequences
     """
-    logging.info('find_sequences_and_save_to_fasta(): Going to find sequences based on genomic loci.')
+    logging.info('find_sequences(): Going to find sequences based on genomic loci.')
 
     genome = get_2bit_genome_file(organism, temp_file)
     num_seqs = len(seqs)
@@ -81,7 +81,7 @@ def find_sequences(organism: str, seqs: pd.DataFrame, temp_file:str) -> pd.DataF
         end = seqs.iloc[i]['seq_region_end']
         seqs.at[i, 'seq'] = genome[chrom][start:end]
 
-    logging.info('find_sequences_and_save_to_fasta(): Done finding sequences.')
+    logging.info('find_sequences(): Done finding sequences.')
     return seqs
 
 
