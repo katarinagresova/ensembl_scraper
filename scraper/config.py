@@ -68,7 +68,7 @@ CONFIG = {
     },
     "organisms": {
         "mus_musculus": {
-            "fasta_file": "Mus_musculus.GRCm39.dna.primary_assembly.fa.gz",
+            "fasta_file": "Mus_musculus.GRCm39.dna.toplevel.fa.gz",
             "2bit_file_name": "mm39",
             "features": {
                 "regulatory_feature": {
@@ -86,7 +86,7 @@ CONFIG = {
             }
         },
         "homo_sapiens": {
-            "fasta_file": "Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz",
+            "fasta_file": "Homo_sapiens.GRCh38.dna.toplevel.fa.gz",
             "2bit_file_name": "hg38",
             "features": {
                 "regulatory_feature": {
