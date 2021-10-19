@@ -68,8 +68,8 @@ CONFIG = {
     },
     "organisms": {
         "mus_musculus": {
-            "fasta_file": "Mus_musculus.GRCm39.dna.toplevel.fa.gz",
-            "2bit_file_name": "mm39",
+            "fasta_file": "Mus_musculus.GRCm38.dna.toplevel.fa.gz",
+            "2bit_file_name": "mm10",
             "features": {
                 "regulatory_feature": {
                     "file": "mmusculus_regulatory_feature__regulatory_feature__main.txt.gz"
