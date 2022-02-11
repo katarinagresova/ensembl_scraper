@@ -9,8 +9,6 @@ Ensemble scraper is command-line tool for accessing data from Ensemble and creat
 ## Instalation
 ```
 pip install git+https://github.com/katarinagresova/ensembl_scraper.git
-wget https://raw.githubusercontent.com/katarinagresova/ensembl_scraper/main/requirements.txt
-pip install -r requirements.txt
 ```
 
 
