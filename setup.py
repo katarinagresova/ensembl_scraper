@@ -14,9 +14,8 @@ setup(
     license="Apache License 2.0",
     keywords=["bioinformatics", "genomics", "data"],
     url="https://github.com/katarinagresova/ensembl_scraper",
-    packages=setuptools.find_packages(include=['scraper']),
+    packages=find_packages(include=['ensembl_scraper']),
     scripts=[],
-    # setup_requires=['pytest-runner'], setup_requires deprecated in v58.3.0
     install_requires=[
         "biopython>=1.79",
         "requests>=2.23.0",

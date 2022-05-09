@@ -1,0 +1,4 @@
+organisms:
+  homo_sapiens:
+    - external_feature
+root_dir: ../../
