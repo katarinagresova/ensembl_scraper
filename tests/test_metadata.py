@@ -1,4 +1,4 @@
-from ensembl_scraper.regulatory import Metadata
+from ensembl.regulatory import Metadata
 import pytest
 from pathlib import Path
 
