@@ -75,7 +75,7 @@ class Metadata():
 
             header_list = self._get_column_names(organism, feature_class)
             needed_cols = ['so_term', 'seq_region_name', 'seq_region_start', 'seq_region_end', 'seq_region_strand']
-            df = pd.read_csv(path, sep='\t', names=header_list, usecols=needed_cols, low_memory=False)
+            df = pd.read_csv(path, sep='\t', names=header_list, usecols=needed_cols, low_memory=False, compression='gzip')
 
             # mapping strand symbols to more widely used - (+, -)
             df['seq_region_strand'] = df['seq_region_strand'].map({1: '+', -1: '-'})
@@ -158,7 +158,7 @@ class Metadata():
 
         tables_url = "ftp://ftp.ensembl.org/pub/release-{}/mysql/regulation_mart_{}/regulation_mart_{}.sql.gz".format(self.release, self.release, self.release)
         
-        tables_path = self.downloader.get(tables_url)
+        tables_path = self.downloader.download(tables_url)
         tables = self._parse_tables_file(tables_path)
 
         return tables
@@ -187,7 +187,7 @@ class Metadata():
                     column_names.append(c_name)
             return column_names
 
-        with open(tables_path) as f:
+        with gzip.open(tables_path) as f:
             ddl = f.read()
         parse = sqlparse.parse(ddl)
 
@@ -220,7 +220,7 @@ class Metadata():
         if organism == 'homo_sapiens':
             assembly = assembly.split('.')[0]
         fasta_url = "ftp://ftp.ensembl.org/pub/release-{}/fasta/{}/dna/{}.{}.dna.toplevel.fa.gz".format(self.release, organism, organism.capitalize(), assembly)
-        fasta_path = self.downloader.get(fasta_url, force=force)
+        fasta_path = self.downloader.download(fasta_url, force=force)
         return fasta_path
 
     def _get_feature_class_path(self, organism, feature_class, force=False):
@@ -228,7 +228,7 @@ class Metadata():
         short_name = self.organism_info[self.organism_info['sql_name'] == organism]['short_name'].values[0]
         feature_class_url = "ftp://ftp.ensembl.org/pub/release-{}/mysql/regulation_mart_{}/{}_{}__{}__main.txt.gz".format(self.release, self.release, short_name, feature_class, feature_class)
         print(feature_class_url)
-        feature_class_path = self.downloader.get(feature_class_url, force=force)
+        feature_class_path = self.downloader.download(feature_class_url, force=force)
         return feature_class_path
 
     def _get_column_names(self, organism, feature_class):
@@ -238,16 +238,16 @@ class Metadata():
     def _prepare_organisms_info(self):
 
         info_url = "ftp://ftp.ensembl.org/pub/release-{}/mysql/regulation_mart_{}/dataset_names.txt.gz".format(self.release, self.release)
-        info_path = self.downloader.get(info_url)
+        info_path = self.downloader.download(info_url)
 
-        return pd.read_csv(info_path, sep='\t', header=None, usecols=[0, 5, 6, 7], names=['short_name', 'full_name', 'sql_name', 'assembly'])
+        return pd.read_csv(info_path, sep='\t', header=None, usecols=[0, 5, 6, 7], names=['short_name', 'full_name', 'sql_name', 'assembly'], compression='gzip')
 
     def _prepare_datasets_info(self):
 
         info_url = "ftp://ftp.ensembl.org/pub/release-{}/mysql/regulation_mart_{}/meta_conf__dataset__main.txt.gz".format(self.release, self.release)
-        info_path = self.downloader.get(info_url)
+        info_path = self.downloader.download(info_url)
 
-        return pd.read_csv(info_path, sep='\t', header=None, usecols=[1, 2, 4], names=['dataset', 'display_name', 'type'])
+        return pd.read_csv(info_path, sep='\t', header=None, usecols=[1, 2, 4], names=['dataset', 'display_name', 'type'], compression='gzip')
 
     def _prepare_files_info(self):
 
